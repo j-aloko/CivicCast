@@ -11,9 +11,7 @@ const limiter = rateLimit({ limit: 10, windowMs: 60000 });
 export default async function handler(req, res) {
   await new Promise((resolve, reject) => {
     limiter(req, res, (result) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
+      if (result instanceof Error) return reject(result);
       return resolve(result);
     });
   });
@@ -56,25 +54,28 @@ async function handleCreatePoll(req, res, session) {
   const { question, description, options, settings, isPublic, closesAt } =
     req.body;
 
+  // Validate input
   const validation = validatePollData({ options, question });
   if (!validation.isValid) {
     return res.status(422).json(ApiResponse.validationError(validation.errors));
   }
+
   const pollData = {
     closesAt: closesAt ? new Date(closesAt) : null,
     creatorId: session.user.id,
     description: description?.trim(),
     isPublic: isPublic !== undefined ? isPublic : true,
     options: options.map((opt) => ({
-      id: Math.random().toString(36).substr(2, 9),
       text: opt.text.trim(),
-      ...(opt.image && { image: opt.image }),
       ...(opt.description && { description: opt.description.trim() }),
+      ...(opt.image && { image: opt.image }),
     })),
     question: question.trim(),
     settings: settings || {},
   };
+
   const poll = await PollService.createPoll(pollData);
+
   return res
     .status(201)
     .json(ApiResponse.success(poll, "Poll created successfully", 201));

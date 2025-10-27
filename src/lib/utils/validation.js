@@ -16,22 +16,10 @@ export const validatePollData = (data) => {
       if (!option.text || option.text.trim().length === 0) {
         errors[`option_${index}`] = "Option text cannot be empty";
       }
+      if (option.text && option.text.trim().length > 200) {
+        errors[`option_${index}`] = "Option text cannot exceed 200 characters";
+      }
     });
-  }
-
-  return {
-    errors,
-    isValid: Object.keys(errors).length === 0,
-  };
-};
-
-export const validateVoteData = (data, poll) => {
-  const errors = {};
-
-  if (typeof data.option !== "number" || data.option < 0) {
-    errors.option = "Invalid option index";
-  } else if (data.option >= poll.options.length) {
-    errors.option = "Option index out of range";
   }
 
   return {

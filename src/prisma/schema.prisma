@@ -94,28 +94,50 @@ model Poll {
   id          String    @id @default(cuid())
   question    String
   description String?
-  options     Json
-  settings    Json?
+  settings    Json?     // Poll settings (private, multiple votes, etc.)
   creatorId   String    @map("creator_id")
   isPublic    Boolean   @default(true) @map("is_public")
   isActive    Boolean   @default(true) @map("is_active")
-  closesAt    DateTime? @map("closes_at")
+  closesAt    DateTime? @map("closes_at") // Optional closing time
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  // Relations - Added missing opposite relations for Notification and PollView
+  // Relations
   creator     User      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  options     PollOption[]
   votes       Vote[]
   likes       Like[]
   comments    Comment[]
   views       PollView[]
-  notifications Notification[] // Added opposite relation for Notification.poll
+  notifications Notification[]
 
+  // Indexes for performance
   @@index([creatorId])
   @@index([isPublic, isActive])
   @@index([createdAt])
   @@index([closesAt])
   @@map("polls")
+}
+
+
+// Add to PollOption model in schema.prisma
+model PollOption {
+  id          String   @id @default(cuid())
+  text        String
+  description String?
+  image       String?
+  order       Int
+  pollId      String   @map("poll_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  poll        Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes       Vote[]
+
+  // Indexes
+  @@index([pollId])
+  @@map("poll_options")
 }
 
 
@@ -186,17 +208,20 @@ model VerificationToken {
 model Vote {
   id        String   @id @default(cuid())
   pollId    String   @map("poll_id")
+  optionId  String   @map("option_id")
   userId    String   @map("user_id")
-  option    Int
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // Ensure one vote per user per poll (unless poll allows multiple)
   @@unique([pollId, userId])
   @@index([pollId])
+  @@index([optionId])
   @@index([userId])
   @@map("votes")
 }

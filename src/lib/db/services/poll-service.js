@@ -8,7 +8,14 @@ export class PollService {
         creatorId: data.creatorId,
         description: data.description,
         isPublic: data.isPublic !== undefined ? data.isPublic : true,
-        options: data.options,
+        options: {
+          create: data.options.map((opt, index) => ({
+            description: opt.description,
+            image: opt.image,
+            order: index,
+            text: opt.text,
+          })),
+        },
         question: data.question,
         settings: data.settings || {
           allowComments: true,
@@ -35,6 +42,9 @@ export class PollService {
             image: true,
             name: true,
           },
+        },
+        options: {
+          orderBy: { order: "asc" },
         },
       },
     });
@@ -63,6 +73,16 @@ export class PollService {
           take: userId ? 1 : 0,
           where: userId ? { userId } : undefined,
         },
+        options: {
+          include: {
+            _count: {
+              select: {
+                votes: true,
+              },
+            },
+          },
+          orderBy: { order: "asc" },
+        },
         votes: {
           take: userId ? 1 : 0,
           where: userId ? { userId } : undefined,
@@ -73,11 +93,20 @@ export class PollService {
 
     if (!poll) return null;
 
-    // Transform for frontend
+    // Calculate percentages and transform data
+    const totalVotes = poll._count.votes;
+    const optionsWithStats = poll.options.map((option) => ({
+      ...option,
+      percentage: totalVotes > 0 ? (option._count.votes / totalVotes) * 100 : 0,
+      voteCount: option._count.votes,
+    }));
+
     return {
       ...poll,
+      options: optionsWithStats,
+      totalVotes,
       userLiked: poll.likes.length > 0,
-      userVote: poll.votes[0]?.option ?? null,
+      userVote: poll.votes[0] || null,
     };
   }
 
@@ -107,6 +136,16 @@ export class PollService {
             take: userId ? 1 : 0,
             where: userId ? { userId } : undefined,
           },
+          options: {
+            include: {
+              _count: {
+                select: {
+                  votes: true,
+                },
+              },
+            },
+            orderBy: { order: "asc" },
+          },
           votes: {
             take: userId ? 1 : 0,
             where: userId ? { userId } : undefined,
@@ -122,11 +161,23 @@ export class PollService {
       }),
     ]);
 
-    const transformedPolls = polls.map((poll) => ({
-      ...poll,
-      userLiked: poll.likes.length > 0,
-      userVote: poll.votes[0]?.option ?? null,
-    }));
+    const transformedPolls = polls.map((poll) => {
+      const totalVotes = poll._count.votes;
+      const optionsWithStats = poll.options.map((option) => ({
+        ...option,
+        percentage:
+          totalVotes > 0 ? (option._count.votes / totalVotes) * 100 : 0,
+        voteCount: option._count.votes,
+      }));
+
+      return {
+        ...poll,
+        options: optionsWithStats,
+        totalVotes,
+        userLiked: poll.likes.length > 0,
+        userVote: poll.votes[0] || null,
+      };
+    });
 
     return {
       pagination: {
@@ -136,42 +187,6 @@ export class PollService {
         total,
       },
       polls: transformedPolls,
-    };
-  }
-
-  static async getUserPolls(userId, page = 1, limit = 10) {
-    const skip = (page - 1) * limit;
-
-    const [polls, total] = await Promise.all([
-      prisma.poll.findMany({
-        include: {
-          _count: {
-            select: {
-              comments: true,
-              likes: true,
-              views: true,
-              votes: true,
-            },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-        where: { creatorId: userId },
-      }),
-      prisma.poll.count({
-        where: { creatorId: userId },
-      }),
-    ]);
-
-    return {
-      pagination: {
-        limit,
-        page,
-        pages: Math.ceil(total / limit),
-        total,
-      },
-      polls,
     };
   }
 
@@ -185,35 +200,38 @@ export class PollService {
       throw new Error("Poll not found or access denied");
     }
 
-    return prisma.poll.update({
-      data: {
-        closesAt: data.closesAt,
-        description: data.description,
-        isPublic: data.isPublic,
-        options: data.options,
-        question: data.question,
-        settings: data.settings,
-        updatedAt: new Date(),
-      },
-      include: {
-        _count: {
-          select: {
-            comments: true,
-            likes: true,
-            views: true,
-            votes: true,
-          },
+    // Start a transaction to update poll and options
+    return prisma.$transaction(async (tx) => {
+      // Update poll
+      const updatedPoll = await tx.poll.update({
+        data: {
+          closesAt: data.closesAt,
+          description: data.description,
+          isPublic: data.isPublic,
+          question: data.question,
+          settings: data.settings,
+          updatedAt: new Date(),
         },
-        creator: {
-          select: {
-            email: true,
-            id: true,
-            image: true,
-            name: true,
-          },
-        },
-      },
-      where: { id },
+        where: { id },
+      });
+
+      // Delete existing options
+      await tx.pollOption.deleteMany({
+        where: { pollId: id },
+      });
+
+      // Create new options
+      await tx.pollOption.createMany({
+        data: data.options.map((opt, index) => ({
+          description: opt.description,
+          image: opt.image,
+          order: index,
+          pollId: id,
+          text: opt.text,
+        })),
+      });
+
+      return updatedPoll;
     });
   }
 
@@ -233,23 +251,43 @@ export class PollService {
   }
 
   static async getPollResults(pollId) {
-    const votes = await prisma.vote.groupBy({
-      _count: {
-        option: true,
+    const poll = await prisma.poll.findUnique({
+      include: {
+        _count: {
+          select: {
+            votes: true,
+          },
+        },
+        options: {
+          include: {
+            _count: {
+              select: {
+                votes: true,
+              },
+            },
+          },
+          orderBy: { order: "asc" },
+        },
       },
-      by: ["option"],
-      where: { pollId },
+      where: { id: pollId },
     });
 
-    const totalVotes = votes.reduce((sum, vote) => sum + vote._count.option, 0);
+    if (!poll) {
+      throw new Error("Poll not found");
+    }
+
+    const totalVotes = poll._count.votes;
+    const results = poll.options.map((option) => ({
+      description: option.description,
+      id: option.id,
+      image: option.image,
+      percentage: totalVotes > 0 ? (option._count.votes / totalVotes) * 100 : 0,
+      text: option.text,
+      voteCount: option._count.votes,
+    }));
 
     return {
-      results: votes.map((vote) => ({
-        count: vote._count.option,
-        option: vote.option,
-        percentage:
-          totalVotes > 0 ? (vote._count.option / totalVotes) * 100 : 0,
-      })),
+      results,
       totalVotes,
     };
   }

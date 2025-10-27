@@ -1,9 +1,14 @@
 import prisma from "../prisma";
 
 export class VoteService {
-  static async submitVote(pollId, userId, option) {
+  static async submitVote(pollId, optionId, userId) {
     // Check if poll exists and is active
     const poll = await prisma.poll.findFirst({
+      include: {
+        options: {
+          where: { id: optionId },
+        },
+      },
       where: {
         OR: [{ closesAt: null }, { closesAt: { gt: new Date() } }],
         id: pollId,
@@ -13,6 +18,10 @@ export class VoteService {
 
     if (!poll) {
       throw new Error("Poll not found or closed for voting");
+    }
+
+    if (poll.options.length === 0) {
+      throw new Error("Invalid option selected");
     }
 
     // Check if user has already voted (unless multiple votes allowed)
@@ -27,7 +36,13 @@ export class VoteService {
       if (existingVote) {
         // Update existing vote
         return prisma.vote.update({
-          data: { option, updatedAt: new Date() },
+          data: {
+            optionId,
+            updatedAt: new Date(),
+          },
+          include: {
+            option: true,
+          },
           where: { id: existingVote.id },
         });
       }
@@ -36,15 +51,21 @@ export class VoteService {
     // Create new vote
     return prisma.vote.create({
       data: {
-        option,
+        optionId,
         pollId,
         userId,
+      },
+      include: {
+        option: true,
       },
     });
   }
 
   static async getUserVote(pollId, userId) {
     return prisma.vote.findUnique({
+      include: {
+        option: true,
+      },
       where: {
         pollId_userId: { pollId, userId },
       },
@@ -52,12 +73,22 @@ export class VoteService {
   }
 
   static async getVoteStats(pollId) {
-    return prisma.vote.groupBy({
+    const votes = await prisma.vote.groupBy({
       _count: {
-        option: true,
+        optionId: true,
       },
-      by: ["option"],
+      by: ["optionId"],
       where: { pollId },
     });
+
+    const totalVotes = votes.reduce(
+      (sum, vote) => sum + vote._count.optionId,
+      0
+    );
+
+    return {
+      totalVotes,
+      votes,
+    };
   }
 }

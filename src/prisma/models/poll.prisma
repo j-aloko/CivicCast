@@ -2,23 +2,24 @@ model Poll {
   id          String    @id @default(cuid())
   question    String
   description String?
-  options     Json
-  settings    Json?
+  settings    Json?     // Poll settings (private, multiple votes, etc.)
   creatorId   String    @map("creator_id")
   isPublic    Boolean   @default(true) @map("is_public")
   isActive    Boolean   @default(true) @map("is_active")
-  closesAt    DateTime? @map("closes_at")
+  closesAt    DateTime? @map("closes_at") // Optional closing time
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  // Relations - Added missing opposite relations for Notification and PollView
+  // Relations
   creator     User      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  options     PollOption[]
   votes       Vote[]
   likes       Like[]
   comments    Comment[]
   views       PollView[]
-  notifications Notification[] // Added opposite relation for Notification.poll
+  notifications Notification[]
 
+  // Indexes for performance
   @@index([creatorId])
   @@index([isPublic, isActive])
   @@index([createdAt])

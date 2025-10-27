@@ -1,0 +1,19 @@
+// Add to PollOption model in schema.prisma
+model PollOption {
+  id          String   @id @default(cuid())
+  text        String
+  description String?
+  image       String?
+  order       Int
+  pollId      String   @map("poll_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  poll        Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes       Vote[]
+
+  // Indexes
+  @@index([pollId])
+  @@map("poll_options")
+}

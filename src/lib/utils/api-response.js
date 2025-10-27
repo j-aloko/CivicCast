@@ -41,6 +41,7 @@ export class ApiResponse {
 export const handleApiError = (error, res) => {
   console.error("API Error:", error);
 
+  // Handle Prisma errors
   if (error.code === "P2002") {
     return res
       .status(409)
@@ -51,5 +52,21 @@ export const handleApiError = (error, res) => {
     return res.status(404).json(ApiResponse.notFound());
   }
 
+  // Handle custom business logic errors
+  if (
+    error.message.includes("not found") ||
+    error.message.includes("Invalid option")
+  ) {
+    return res.status(404).json(ApiResponse.notFound(error.message));
+  }
+
+  if (
+    error.message.includes("closed") ||
+    error.message.includes("access denied")
+  ) {
+    return res.status(400).json(ApiResponse.error(error.message, 400));
+  }
+
+  // Default error
   return res.status(500).json(ApiResponse.error("Internal server error"));
 };
