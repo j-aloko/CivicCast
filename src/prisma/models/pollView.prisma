@@ -1,0 +1,17 @@
+model PollView {
+  id        String   @id @default(cuid())
+  pollId    String   @map("poll_id")
+  userId    String?  @map("user_id")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  poll      Poll?    @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([pollId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("poll_views")
+}

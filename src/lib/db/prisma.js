@@ -1,0 +1,15 @@
+import { PrismaClient } from "@prisma/client";
+import { withAccelerate } from "@prisma/extension-accelerate";
+
+const prisma = new PrismaClient({
+  transactionOptions: {
+    maxWait: 15000,
+    timeout: 15000,
+  },
+}).$extends(withAccelerate());
+
+const globalForPrisma = global;
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
+export default prisma;

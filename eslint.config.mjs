@@ -20,7 +20,7 @@ const eslintConfig = [
     "plugin:import/recommended",
     "airbnb",
     "airbnb/hooks",
-    "plugin:prettier/recommended",
+    "plugin:prettier/recommended"
   ),
   js.configs.recommended,
   {

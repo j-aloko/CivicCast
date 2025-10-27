@@ -1,0 +1,27 @@
+model Poll {
+  id          String    @id @default(cuid())
+  question    String
+  description String?
+  options     Json
+  settings    Json?
+  creatorId   String    @map("creator_id")
+  isPublic    Boolean   @default(true) @map("is_public")
+  isActive    Boolean   @default(true) @map("is_active")
+  closesAt    DateTime? @map("closes_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations - Added missing opposite relations for Notification and PollView
+  creator     User      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  votes       Vote[]
+  likes       Like[]
+  comments    Comment[]
+  views       PollView[]
+  notifications Notification[] // Added opposite relation for Notification.poll
+
+  @@index([creatorId])
+  @@index([isPublic, isActive])
+  @@index([createdAt])
+  @@index([closesAt])
+  @@map("polls")
+}
