@@ -15,6 +15,9 @@ import {
   useTheme,
   useMediaQuery,
 } from "@mui/material";
+import Link from "next/link";
+
+import { ROUTES } from "@/constant/constant";
 
 import Logo from "../logo/Logo";
 
@@ -58,7 +61,8 @@ function Header() {
           <Box display="flex" justifyContent="center" width="100%">
             <Button
               variant="contained"
-              href="#cta"
+              href={ROUTES.signin}
+              component={Link}
               sx={{
                 "&:hover": {
                   backgroundColor: "primary.light",
@@ -114,7 +118,8 @@ function Header() {
             ))}
             <Button
               variant="contained"
-              href="#cta"
+              href={ROUTES.signin}
+              component={Link}
               sx={{
                 "&:hover": {
                   backgroundColor: "primary.light",
