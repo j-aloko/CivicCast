@@ -23,8 +23,10 @@ import Link from "next/link";
 
 import { ROUTES } from "@/constant/constant";
 import { usePolls } from "@/hooks/usePolls";
+import { useRealtimeDashboard } from "@/hooks/useRealtimeDashboard";
 
 function Dashboard({ session }) {
+  useRealtimeDashboard();
   const { polls, isLoading, getPolls } = usePolls();
 
   useEffect(() => {

@@ -16,6 +16,39 @@ export function unregisterStream(pollId, controller) {
   if (set.size === 0) activeStreams.delete(pollId);
 }
 
+const dashboardStreams = new Set(); // Add this at top
+
+export function registerDashboard(controller) {
+  dashboardStreams.add(controller);
+  controller.signal?.addEventListener?.("abort", () => {
+    dashboardStreams.delete(controller);
+  });
+}
+
+export async function broadcastToDashboard() {
+  if (dashboardStreams.size === 0) return;
+
+  const { PollService } = await import("@/lib/db/services/poll-service");
+  const polls = await PollService.getPolls(1, 6); // same as dashboard
+
+  const payload = {
+    data: { polls: polls.polls },
+    success: true,
+    timestamp: new Date().toISOString(),
+  };
+
+  const message = `data: ${JSON.stringify(payload)}\n\n`;
+  const encoded = new TextEncoder().encode(message);
+
+  Array.from(dashboardStreams).forEach((ctrl) => {
+    try {
+      if (ctrl.desiredSize !== null) ctrl.enqueue(encoded);
+    } catch {
+      dashboardStreams.delete(ctrl);
+    }
+  });
+}
+
 export async function broadcastToPoll(pollId, triggeringUserId = null) {
   const set = activeStreams.get(pollId);
   if (!set || set.size === 0) {

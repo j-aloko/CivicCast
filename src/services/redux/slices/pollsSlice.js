@@ -222,6 +222,34 @@ const pollsSlice = createSlice({
       poll._count.votes = total;
     },
 
+    updatePollInList: (state, action) => {
+      const { pollId, updates } = action.payload;
+      const idx = state.polls.findIndex((p) => p.id === pollId);
+      if (idx === -1) return;
+
+      const poll = state.polls[idx];
+      const { likeCount, results } = updates;
+
+      if (likeCount !== undefined) {
+        poll._count.likes = likeCount;
+      }
+
+      if (results?.options) {
+        poll.options = poll.options.map((opt) => {
+          const updated = results.options.find((o) => o.id === opt.id);
+          if (updated) {
+            return {
+              ...opt,
+              percentage: updated.percentage,
+              voteCount: updated.voteCount,
+            };
+          }
+          return opt;
+        });
+        poll._count.votes = results.totalVotes;
+      }
+    },
+
     updatePollRealtime: (state, action) => {
       const { pollId, updates } = action.payload;
       const { poll: partialPoll = {}, results, likeCount, userLiked } = updates;
@@ -312,6 +340,7 @@ export const {
   clearCurrentPoll,
   clearError,
   updatePollRealtime,
+  updatePollInList,
   optimisticVote,
   optimisticLike,
 } = pollsSlice.actions;

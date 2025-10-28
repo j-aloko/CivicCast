@@ -5,7 +5,7 @@ import { NotificationService } from "@/lib/db/services/notification-service";
 import { PollService } from "@/lib/db/services/poll-service";
 import { VoteService } from "@/lib/db/services/vote-service";
 import { ApiResponse, handleApiError } from "@/lib/utils/api-response";
-import { broadcastToPoll } from "@/lib/utils/sse-manager";
+import { broadcastToDashboard, broadcastToPoll } from "@/lib/utils/sse-manager";
 
 export async function GET(req, { params }) {
   const session = await getServerSession(authOptions);
@@ -53,6 +53,7 @@ export async function POST(req, { params }) {
     }
 
     await broadcastToPoll(pollId);
+    await broadcastToDashboard();
 
     return Response.json(
       ApiResponse.success(
