@@ -15,6 +15,7 @@ import {
   Typography,
   Alert,
 } from "@mui/material";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 
 import { ROUTES } from "@/constant/constant";
@@ -29,7 +30,7 @@ function SignIn() {
 
     try {
       await signIn(provider, {
-        callbackUrl: ROUTES.home,
+        callbackUrl: ROUTES.dashboard,
         redirect: true,
       });
     } catch {
@@ -46,7 +47,6 @@ function SignIn() {
         backgroundColor: "background.default",
         display: "flex",
         justifyContent: "center",
-        minHeight: "100vh",
         py: 4,
       }}
     >
@@ -60,7 +60,7 @@ function SignIn() {
       >
         <CardContent sx={{ p: 4 }}>
           <Typography
-            variant="h4"
+            variant="h5"
             component="h1"
             align="center"
             gutterBottom
@@ -68,14 +68,13 @@ function SignIn() {
           >
             Welcome Back
           </Typography>
-
           <Typography
             variant="body1"
             align="center"
             color="text.secondary"
             sx={{ mb: 4 }}
           >
-            Sign in to your CivicCast account
+            Sign in to your account
           </Typography>
 
           {error && (
@@ -93,12 +92,17 @@ function SignIn() {
               disabled={isLoading}
               sx={{
                 "&:hover": {
-                  backgroundColor: "primary.light",
-                  borderColor: "primary.main",
+                  backgroundColor: "#f8f9fa",
+                  borderColor: "#4285f4",
+                  boxShadow: "0 1px 3px rgba(66, 133, 244, 0.3)",
                 },
-                borderColor: "grey.300",
-                color: "text.primary",
+                backgroundColor: "#ffffff",
+                borderColor: "#dadce0",
+                color: "#3c4043",
+                fontSize: "0.875rem",
+                fontWeight: 500,
                 py: 1.5,
+                textTransform: "none",
               }}
             >
               Continue with Google
@@ -112,12 +116,17 @@ function SignIn() {
               disabled={isLoading}
               sx={{
                 "&:hover": {
-                  backgroundColor: "primary.light",
-                  borderColor: "primary.main",
+                  backgroundColor: "#f6f8fa",
+                  borderColor: "#1f2328",
+                  boxShadow: "0 1px 3px rgba(31, 35, 40, 0.3)",
                 },
-                borderColor: "grey.300",
-                color: "text.primary",
+                backgroundColor: "#ffffff",
+                borderColor: "#d0d7de",
+                color: "#1f2328",
+                fontSize: "0.875rem",
+                fontWeight: 500,
                 py: 1.5,
+                textTransform: "none",
               }}
             >
               Continue with GitHub
@@ -130,8 +139,8 @@ function SignIn() {
             <Typography variant="body2" color="text.secondary">
               Don&apos;t have an account?{" "}
               <Button
-                component="a"
-                href="/auth/signup"
+                component={Link}
+                href={ROUTES.signup}
                 sx={{
                   "&:hover": {
                     textDecoration: "underline",

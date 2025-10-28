@@ -6,8 +6,8 @@ import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import PropTypes from "prop-types";
 
 import Header from "@/components/header/Header";
-import StoreProvider from "@/provider-components/StoreProvider";
 
+import { Providers } from "./providers";
 import theme from "./theme";
 
 export const metadata = {
@@ -23,10 +23,10 @@ export default function RootLayout({ children }) {
         <AppRouterCacheProvider options={{ enableCssLayer: true }}>
           <ThemeProvider theme={theme}>
             <CssBaseline />
-            <StoreProvider>
+            <Providers>
               <Header />
               {children}
-            </StoreProvider>
+            </Providers>
           </ThemeProvider>
         </AppRouterCacheProvider>
       </body>

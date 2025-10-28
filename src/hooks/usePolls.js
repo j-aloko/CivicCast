@@ -2,8 +2,6 @@
 
 import { useCallback } from "react";
 
-import { useDispatch, useSelector } from "react-redux";
-
 import {
   fetchPolls,
   fetchPoll,
@@ -13,11 +11,12 @@ import {
   optimisticVote,
   optimisticLike,
 } from "@/services/redux/slices/pollsSlice";
+import { useAppDispatch, useAppSelector } from "@/services/redux/store";
 
 export const usePolls = () => {
-  const dispatch = useDispatch();
-  const pollsState = useSelector((state) => state.polls);
-  const authState = useSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
+  const pollsState = useAppSelector((state) => state.polls);
+  const authState = useAppSelector((state) => state.auth);
 
   const getPolls = useCallback(
     (params) => {

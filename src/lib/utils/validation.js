@@ -1,3 +1,4 @@
+// src/lib/utils/validation.js
 export const validatePollData = (data) => {
   const errors = {};
 
@@ -12,12 +13,23 @@ export const validatePollData = (data) => {
   ) {
     errors.options = "Poll must have at least 2 options";
   } else {
+    const validOptions = data.options.filter(
+      (opt) => opt.text && opt.text.trim()
+    );
+    if (validOptions.length < 2) {
+      errors.options = "Poll must have at least 2 valid options";
+    }
+
     data.options.forEach((option, index) => {
       if (!option.text || option.text.trim().length === 0) {
         errors[`option_${index}`] = "Option text cannot be empty";
-      }
-      if (option.text && option.text.trim().length > 200) {
+      } else if (option.text.trim().length > 200) {
         errors[`option_${index}`] = "Option text cannot exceed 200 characters";
+      }
+
+      if (option.description && option.description.length > 500) {
+        errors[`option_desc_${index}`] =
+          "Option description cannot exceed 500 characters";
       }
     });
   }

@@ -3,80 +3,62 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../../lib/auth/options";
 import { PollService } from "../../../lib/db/services/poll-service";
 import { ApiResponse, handleApiError } from "../../../lib/utils/api-response";
-import { rateLimit } from "../../../lib/utils/rate-limit";
 import { validatePollData } from "../../../lib/utils/validation";
 
-const limiter = rateLimit({ limit: 10, windowMs: 60000 });
-
-export default async function handler(req, res) {
-  await new Promise((resolve, reject) => {
-    limiter(req, res, (result) => {
-      if (result instanceof Error) return reject(result);
-      return resolve(result);
-    });
-  });
-
-  const session = await getServerSession(req, res, authOptions);
+export async function GET(req) {
+  const session = await getServerSession(authOptions);
+  const { searchParams } = new URL(req.url);
+  const page = searchParams.get("page") || 1;
+  const limit = searchParams.get("limit") || 10;
 
   try {
-    switch (req.method) {
-      case "GET":
-        await handleGetPolls(req, res, session);
-        break;
-      case "POST":
-        await handleCreatePoll(req, res, session);
-        break;
-      default:
-        res.setHeader("Allow", ["GET", "POST"]);
-        res
-          .status(405)
-          .json(ApiResponse.error(`Method ${req.method} Not Allowed`, 405));
-    }
+    const result = await PollService.getPolls(+page, +limit, session?.user?.id);
+    return Response.json(ApiResponse.success(result));
   } catch (error) {
-    handleApiError(error, res);
+    return handleApiError(error);
   }
 }
 
-async function handleGetPolls(req, res, session) {
-  const { page = 1, limit = 10 } = req.query;
-  const userId = session?.user?.id || null;
-
-  const result = await PollService.getPolls(+page, +limit, userId);
-
-  res.status(200).json(ApiResponse.success(result));
-}
-
-async function handleCreatePoll(req, res, session) {
+export async function POST(req) {
+  const session = await getServerSession(authOptions);
   if (!session) {
-    return res.status(401).json(ApiResponse.unauthorized());
+    return Response.json(ApiResponse.unauthorized(), { status: 401 });
   }
 
-  const { question, description, options, settings, isPublic, closesAt } =
-    req.body;
+  try {
+    const body = await req.json();
+    const { question, description, options, settings, isPublic, closesAt } =
+      body;
 
-  // Validate input
-  const validation = validatePollData({ options, question });
-  if (!validation.isValid) {
-    return res.status(422).json(ApiResponse.validationError(validation.errors));
+    // Validate input
+    const validation = validatePollData({ options, question });
+    if (!validation.isValid) {
+      return Response.json(ApiResponse.validationError(validation.errors), {
+        status: 422,
+      });
+    }
+
+    const pollData = {
+      closesAt: closesAt ? new Date(closesAt) : null,
+      creatorId: session.user.id,
+      description: description?.trim(),
+      isPublic: isPublic !== undefined ? isPublic : true,
+      options: options.map((opt) => ({
+        text: opt.text.trim(),
+        ...(opt.description && { description: opt.description.trim() }),
+        ...(opt.image && { image: opt.image }),
+      })),
+      question: question.trim(),
+      settings: settings || {},
+    };
+
+    const poll = await PollService.createPoll(pollData);
+
+    return Response.json(
+      ApiResponse.success(poll, "Poll created successfully", 201),
+      { status: 201 }
+    );
+  } catch (error) {
+    return handleApiError(error);
   }
-
-  const pollData = {
-    closesAt: closesAt ? new Date(closesAt) : null,
-    creatorId: session.user.id,
-    description: description?.trim(),
-    isPublic: isPublic !== undefined ? isPublic : true,
-    options: options.map((opt) => ({
-      text: opt.text.trim(),
-      ...(opt.description && { description: opt.description.trim() }),
-      ...(opt.image && { image: opt.image }),
-    })),
-    question: question.trim(),
-    settings: settings || {},
-  };
-
-  const poll = await PollService.createPoll(pollData);
-
-  return res
-    .status(201)
-    .json(ApiResponse.success(poll, "Poll created successfully", 201));
 }

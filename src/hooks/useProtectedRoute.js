@@ -1,5 +1,3 @@
-// hooks/useProtectedRoute.js
-
 "use client";
 
 import { useEffect } from "react";

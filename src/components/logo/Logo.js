@@ -1,13 +1,16 @@
 import React from "react";
 
 import { Typography, Box } from "@mui/material";
+import Link from "next/link";
 
-function Logo({ theme }) {
+import { ROUTES } from "@/constant/constant";
+
+function Logo({ theme, variant = "h4" }) {
   return (
     <Typography
-      variant="h4"
-      component="a"
-      href="#"
+      variant={variant}
+      component={Link}
+      href={ROUTES.home}
       sx={{
         alignItems: "center",
         color: "primary.main",

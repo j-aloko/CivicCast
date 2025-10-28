@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { getSession } from "next-auth/react";
+import { signOut } from "next-auth/react";
 
 const initialState = {
   error: null,
@@ -18,6 +18,7 @@ const authSlice = createSlice({
     logout: (state) => {
       state.user = null;
       state.isAuthenticated = false;
+      state.isLoading = false;
     },
     setError: (state, action) => {
       state.error = action.payload;
@@ -33,12 +34,12 @@ const authSlice = createSlice({
   },
 });
 
-export const initializeAuth = () => async (dispatch) => {
+export const signOutUser = () => async (dispatch) => {
   try {
-    const session = await getSession();
-    dispatch(setUser(session?.user || null));
+    await signOut({ redirect: false });
+    dispatch(logout());
   } catch {
-    dispatch(setError("Failed to initialize authentication"));
+    dispatch(setError("Failed to sign out"));
   }
 };
 

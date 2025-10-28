@@ -16,11 +16,12 @@ const initialState = {
 
 export const fetchPolls = createAsyncThunk(
   "polls/fetchPolls",
-  async (params, { rejectWithValue }) => {
+  async ({ rejectWithValue }, params = {}) => {
     try {
       const { page = 1, limit = 10 } = params;
-      const response = await fetch(`/api/polls?page=${page}&limit=${limit}`);
+      const response = await fetch(`api/polls?page=${page}&limit=${limit}`);
       const data = await response.json();
+      console.log(data);
 
       if (!data.success) {
         throw new Error(data.message);
@@ -63,11 +64,9 @@ export const createPoll = createAsyncThunk(
         method: "POST",
       });
       const data = await response.json();
-
       if (!data.success) {
         throw new Error(data.message);
       }
-
       return data.data;
     } catch (error) {
       return rejectWithValue(error.message);

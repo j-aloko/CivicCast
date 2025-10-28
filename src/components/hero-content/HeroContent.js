@@ -4,6 +4,9 @@ import React from "react";
 
 import { Bolt } from "@mui/icons-material";
 import { Box, Typography, Button, Chip } from "@mui/material";
+import Link from "next/link";
+
+import { ROUTES } from "@/constant/constant";
 
 function HeroContent() {
   return (
@@ -56,7 +59,8 @@ function HeroContent() {
       >
         <Button
           variant="contained"
-          href="#cta"
+          href={ROUTES.createPoll}
+          component={Link}
           sx={{
             "&:hover": {
               backgroundColor: "primary.light",
@@ -75,7 +79,8 @@ function HeroContent() {
 
         <Button
           variant="outlined"
-          href="#demo"
+          href={ROUTES.viewLiveDemo}
+          component={Link}
           sx={{
             "&:hover": {
               backgroundColor: "grey.100",
