@@ -16,6 +16,7 @@ import {
   Alert,
 } from "@mui/material";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 
 import { ROUTES } from "@/constant/constant";
@@ -24,13 +25,16 @@ function SignUp() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || ROUTES.dashboard;
+
   const handleOAuthSignUp = async (provider) => {
     setIsLoading(true);
     setError("");
 
     try {
       await signIn(provider, {
-        callbackUrl: ROUTES.dashboard,
+        callbackUrl,
         redirect: true,
       });
     } catch {

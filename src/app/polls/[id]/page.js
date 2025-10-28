@@ -5,10 +5,10 @@ import { Container } from "@mui/material";
 import PollDisplay from "@/components/polls/PollDisplay";
 
 async function PollPage({ params }) {
-  const pollId = await params.id;
+  const { id } = await params;
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
-      <PollDisplay pollId={pollId} />
+      <PollDisplay pollId={id} />
     </Container>
   );
 }
