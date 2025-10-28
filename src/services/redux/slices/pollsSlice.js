@@ -190,48 +190,119 @@ const pollsSlice = createSlice({
 
     optimisticLike: (state, action) => {
       const { pollId, liked } = action.payload;
-      const poll = state.currentPoll;
+      if (state.currentPoll?.id !== pollId) return;
 
-      if (poll && poll.id === pollId) {
-        poll.userLiked = liked;
-        poll._count.likes = liked
-          ? poll._count.likes + 1
-          : poll._count.likes - 1;
-      }
+      state.currentPoll.userLiked = liked;
+      state.currentPoll._count = state.currentPoll._count ?? {};
+      state.currentPoll._count.likes = liked
+        ? (state.currentPoll._count.likes ?? 0) + 1
+        : (state.currentPoll._count.likes ?? 0) - 1;
     },
 
-    // Optimistic updates
     optimisticVote: (state, action) => {
       const { pollId, optionId } = action.payload;
-      const poll = state.currentPoll;
-      if (poll && poll.id === pollId) {
-        poll.userVote = { id: "temp", optionId };
-        poll.options = poll.options.map((opt) =>
-          opt.id === optionId ? { ...opt, voteCount: opt.voteCount + 1 } : opt
-        );
-        const totalVotes = poll.options.reduce(
-          (sum, opt) => sum + opt.voteCount,
-          0
-        );
-        poll.options = poll.options.map((opt) => ({
-          ...opt,
-          percentage: totalVotes > 0 ? (opt.voteCount / totalVotes) * 100 : 0,
-        }));
+      if (state.currentPoll?.id !== pollId) return;
 
-        poll.totalVotes = totalVotes;
-        poll._count.votes = totalVotes;
-      }
+      const poll = state.currentPoll;
+      poll.userVote = { optionId };
+
+      poll.options = poll.options.map((opt) =>
+        opt.id === optionId
+          ? { ...opt, voteCount: (opt.voteCount ?? 0) + 1 }
+          : opt
+      );
+
+      const total = poll.options.reduce((s, o) => s + (o.voteCount ?? 0), 0);
+      poll.options = poll.options.map((opt) => ({
+        ...opt,
+        percentage: total > 0 ? (opt.voteCount / total) * 100 : 0,
+      }));
+
+      poll._count = poll._count ?? {};
+      poll._count.votes = total;
     },
 
-    // Real-time updates
     updatePollRealtime: (state, action) => {
       const { pollId, updates } = action.payload;
-      const pollIndex = state.polls.findIndex((poll) => poll.id === pollId);
-      if (pollIndex !== -1) {
-        state.polls[pollIndex] = { ...state.polls[pollIndex], ...updates };
-      }
+      const { poll: partialPoll = {}, results, likeCount, userLiked } = updates;
+      const mergeResults = (target) => {
+        if (!target?.options || !Array.isArray(target.options) || !results) {
+          return target;
+        }
+        const totalVotes = results.totalVotes ?? 0;
+        const newOptions = target.options.map((existingOpt) => {
+          const broadcastOpt = results.options.find(
+            (o) => o.id === existingOpt.id
+          );
+          const voteCount =
+            broadcastOpt?.voteCount ?? existingOpt.voteCount ?? 0;
+          const percentage =
+            totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0;
+          return {
+            ...existingOpt,
+            percentage,
+            voteCount,
+          };
+        });
+
+        return {
+          ...target,
+          _count: {
+            ...(target._count ?? {}),
+            likes: likeCount ?? target._count?.likes,
+            votes: totalVotes,
+          },
+          options: newOptions,
+          totalVotes,
+        };
+      };
       if (state.currentPoll?.id === pollId) {
-        state.currentPoll = { ...state.currentPoll, ...updates };
+        const base = {
+          ...state.currentPoll,
+          ...(partialPoll.id && { id: partialPoll.id }),
+          ...(partialPoll.question && { question: partialPoll.question }),
+          ...(partialPoll.description !== undefined && {
+            description: partialPoll.description,
+          }),
+          ...(partialPoll.settings && { settings: partialPoll.settings }),
+          ...(partialPoll.isPublic !== undefined && {
+            isPublic: partialPoll.isPublic,
+          }),
+          ...(partialPoll.isActive !== undefined && {
+            isActive: partialPoll.isActive,
+          }),
+          ...(partialPoll.closesAt && { closesAt: partialPoll.closesAt }),
+          ...(partialPoll.createdAt && { createdAt: partialPoll.createdAt }),
+          ...(partialPoll.updatedAt && { updatedAt: partialPoll.updatedAt }),
+        };
+
+        if (userLiked !== undefined) {
+          state.currentPoll.userLiked = userLiked;
+        }
+        state.currentPoll = mergeResults(base);
+      }
+      const idx = state.polls.findIndex((p) => p.id === pollId);
+      if (idx !== -1) {
+        const base = {
+          ...state.polls[idx],
+          ...(partialPoll.id && { id: partialPoll.id }),
+          ...(partialPoll.question && { question: partialPoll.question }),
+          ...(partialPoll.description !== undefined && {
+            description: partialPoll.description,
+          }),
+          ...(partialPoll.settings && { settings: partialPoll.settings }),
+          ...(partialPoll.isPublic !== undefined && {
+            isPublic: partialPoll.isPublic,
+          }),
+          ...(partialPoll.isActive !== undefined && {
+            isActive: partialPoll.isActive,
+          }),
+          ...(partialPoll.closesAt && { closesAt: partialPoll.closesAt }),
+          ...(partialPoll.createdAt && { createdAt: partialPoll.createdAt }),
+          ...(partialPoll.updatedAt && { updatedAt: partialPoll.updatedAt }),
+        };
+
+        state.polls[idx] = mergeResults(base);
       }
     },
   },

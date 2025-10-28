@@ -2,7 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 
-import { HowToVote, Visibility, VisibilityOff } from "@mui/icons-material";
+import {
+  HowToVote,
+  Visibility,
+  VisibilityOff,
+  LiveTv,
+  Refresh,
+} from "@mui/icons-material";
 import {
   Box,
   Card,
@@ -14,19 +20,27 @@ import {
   Alert,
   ButtonGroup,
   Divider,
+  IconButton,
+  Tooltip,
+  CircularProgress,
 } from "@mui/material";
 
 import { usePolls } from "@/hooks/usePolls";
+import { useRealtime } from "@/hooks/useRealtime";
 
 import LikeButton from "./LikeButton";
 
 function PollDisplay({ pollId }) {
-  const { currentPoll, getPoll, voteOnPoll, isAuthenticated } = usePolls();
+  const { currentPoll, getPoll, voteOnPoll, isAuthenticated, isLoading } =
+    usePolls();
+  const { isConnected } = useRealtime(pollId);
+
   const [selectedOption, setSelectedOption] = useState(null);
   const [hasVoted, setHasVoted] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [userManuallyToggledResults, setUserManuallyToggledResults] =
     useState(false);
+  const [isVoting, setIsVoting] = useState(false);
 
   useEffect(() => {
     if (pollId) {
@@ -39,7 +53,6 @@ function PollDisplay({ pollId }) {
       const userHasVoted = !!currentPoll.userVote;
       setHasVoted(userHasVoted);
 
-      // Only auto-show results if poll settings allow it AND user hasn't manually toggled
       if (!userManuallyToggledResults) {
         const shouldShowResults =
           currentPoll.settings?.showResults || userHasVoted;
@@ -53,14 +66,22 @@ function PollDisplay({ pollId }) {
   }, [currentPoll, userManuallyToggledResults]);
 
   const handleVote = async () => {
-    if (!selectedOption || !isAuthenticated) return;
-
+    if (!selectedOption || !isAuthenticated || isVoting) return;
+    setIsVoting(true);
     try {
       await voteOnPoll(pollId, selectedOption);
       setHasVoted(true);
     } catch (error) {
       console.error("Error voting:", error);
+    } finally {
+      setIsVoting(false);
     }
+  };
+
+  const getVoteButtonText = () => {
+    if (isVoting) return "Voting...";
+    if (hasVoted) return "Change Vote";
+    return "Submit Vote";
   };
 
   const handleResultsToggle = (show) => {
@@ -68,21 +89,40 @@ function PollDisplay({ pollId }) {
     setUserManuallyToggledResults(true);
   };
 
+  const handleRefreshPoll = () => {
+    getPoll(pollId);
+  };
+
   const isPollClosed =
     currentPoll?.closesAt && new Date(currentPoll.closesAt) <= new Date();
   const canVote =
     isAuthenticated &&
     !isPollClosed &&
-    (!hasVoted || currentPoll.settings?.allowMultiple);
+    (!hasVoted || currentPoll?.settings?.allowMultiple);
 
   const totalVotes =
     currentPoll?.options?.reduce((sum, opt) => sum + opt.voteCount, 0) || 0;
+
+  if (isLoading && !currentPoll) {
+    return (
+      <Card>
+        <CardContent sx={{ py: 4, textAlign: "center" }}>
+          <CircularProgress />
+          <Typography variant="body1" sx={{ mt: 2 }}>
+            Loading poll...
+          </Typography>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!currentPoll) {
     return (
       <Card>
         <CardContent>
-          <Typography>Loading poll...</Typography>
+          <Alert severity="error">
+            Poll not found or you don&apos;t have permission to view it.
+          </Alert>
         </CardContent>
       </Card>
     );
@@ -90,7 +130,25 @@ function PollDisplay({ pollId }) {
 
   return (
     <Box>
-      {/* Poll Header */}
+      {!isConnected && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 2 }}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={handleRefreshPoll}
+              startIcon={<Refresh />}
+            >
+              Refresh
+            </Button>
+          }
+        >
+          Live updates disconnected. Results may not be current.
+        </Alert>
+      )}
+
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Box
@@ -102,9 +160,36 @@ function PollDisplay({ pollId }) {
             }}
           >
             <Box sx={{ flex: 1 }}>
-              <Typography variant="h4" component="h1" gutterBottom>
-                {currentPoll.question}
-              </Typography>
+              <Box
+                sx={{ alignItems: "center", display: "flex", gap: 1, mb: 1 }}
+              >
+                <Typography variant="h4" component="h1">
+                  {currentPoll.question}
+                </Typography>
+                {isConnected && (
+                  <Tooltip title="Live updates active">
+                    <Chip
+                      icon={<LiveTv />}
+                      label="LIVE"
+                      color="success"
+                      size="small"
+                      variant="outlined"
+                    />
+                  </Tooltip>
+                )}
+                {!isConnected && (
+                  <Tooltip title="Live updates disconnected">
+                    <Chip
+                      icon={<LiveTv />}
+                      label="OFFLINE"
+                      color="default"
+                      size="small"
+                      variant="outlined"
+                    />
+                  </Tooltip>
+                )}
+              </Box>
+
               {currentPoll.description && (
                 <Typography
                   variant="body1"
@@ -116,12 +201,16 @@ function PollDisplay({ pollId }) {
               )}
             </Box>
 
-            <Box sx={{ display: "flex", gap: 1 }}>
+            <Box sx={{ alignItems: "center", display: "flex", gap: 1 }}>
               <LikeButton pollId={pollId} />
+              <Tooltip title="Refresh poll data">
+                <IconButton onClick={handleRefreshPoll} size="small">
+                  <Refresh />
+                </IconButton>
+              </Tooltip>
             </Box>
           </Box>
 
-          {/* Poll Metadata */}
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
             <Chip
               label={`${totalVotes} votes`}
@@ -129,7 +218,7 @@ function PollDisplay({ pollId }) {
               size="small"
             />
             <Chip
-              label={`${currentPoll._count.likes} likes`}
+              label={`${currentPoll._count?.likes || 0} likes`}
               variant="outlined"
               size="small"
             />
@@ -151,7 +240,6 @@ function PollDisplay({ pollId }) {
             {hasVoted && <Chip label="Voted" color="success" size="small" />}
           </Box>
 
-          {/* Created By */}
           <Typography variant="body2" color="text.secondary">
             Created by {currentPoll.creator?.name || "Unknown"} •{" "}
             {new Date(currentPoll.createdAt).toLocaleDateString()}
@@ -159,7 +247,6 @@ function PollDisplay({ pollId }) {
         </CardContent>
       </Card>
 
-      {/* Results Toggle - Improved Design */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Box
@@ -212,7 +299,6 @@ function PollDisplay({ pollId }) {
         </CardContent>
       </Card>
 
-      {/* Voting Section */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
           {!isAuthenticated && (
@@ -233,12 +319,24 @@ function PollDisplay({ pollId }) {
             </Alert>
           )}
 
-          {/* Results Section - Always visible if toggled on */}
           {showResults && (
             <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Live Results ({totalVotes} total votes)
-              </Typography>
+              <Box
+                sx={{ alignItems: "center", display: "flex", gap: 1, mb: 2 }}
+              >
+                <Typography variant="h6">
+                  Live Results ({totalVotes} total votes)
+                </Typography>
+                {isConnected && (
+                  <Chip
+                    icon={<LiveTv />}
+                    label="LIVE"
+                    size="small"
+                    color="success"
+                  />
+                )}
+              </Box>
+
               {currentPoll.options.map((option) => {
                 const percentage =
                   totalVotes > 0 ? (option.voteCount / totalVotes) * 100 : 0;
@@ -305,7 +403,6 @@ function PollDisplay({ pollId }) {
             </Box>
           )}
 
-          {/* Voting Interface - Always available if user can vote */}
           {canVote && (
             <Box>
               <Typography variant="h6" gutterBottom>
@@ -319,6 +416,7 @@ function PollDisplay({ pollId }) {
                     selectedOption === option.id ? "contained" : "outlined"
                   }
                   onClick={() => setSelectedOption(option.id)}
+                  disabled={isVoting}
                   sx={{
                     justifyContent: "flex-start",
                     mb: 1,
@@ -335,11 +433,13 @@ function PollDisplay({ pollId }) {
                 fullWidth
                 size="large"
                 onClick={handleVote}
-                disabled={!selectedOption}
-                startIcon={<HowToVote />}
+                disabled={!selectedOption || isVoting}
+                startIcon={
+                  isVoting ? <CircularProgress size={20} /> : <HowToVote />
+                }
                 sx={{ mt: 2 }}
               >
-                {hasVoted ? "Change Vote" : "Submit Vote"}
+                {getVoteButtonText()}
               </Button>
             </Box>
           )}
@@ -359,11 +459,6 @@ function PollDisplay({ pollId }) {
           )}
         </CardContent>
       </Card>
-
-      {/* Comments Section */}
-      {/* currentPoll.settings?.allowComments && (
-        <CommentsSection pollId={pollId} />
-      ) */}
     </Box>
   );
 }

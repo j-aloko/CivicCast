@@ -5,13 +5,14 @@ import { LikeService } from "@/lib/db/services/like-service";
 import { NotificationService } from "@/lib/db/services/notification-service";
 import { PollService } from "@/lib/db/services/poll-service";
 import { ApiResponse, handleApiError } from "@/lib/utils/api-response";
+import { broadcastToPoll } from "@/lib/utils/sse-manager";
 
 export async function GET(req, { params }) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return Response.json(ApiResponse.unauthorized(), { status: 401 });
   }
-  const { id: pollId } = params;
+  const { id: pollId } = await params;
   try {
     const like = await LikeService.getUserLike(pollId, session.user.id);
     const likeCount = await LikeService.getLikeCount(pollId);
@@ -32,7 +33,7 @@ export async function POST(req, { params }) {
   if (!session) {
     return Response.json(ApiResponse.unauthorized(), { status: 401 });
   }
-  const { id: pollId } = params;
+  const { id: pollId } = await params;
   const userId = session.user.id;
   try {
     const poll = await PollService.getPoll(pollId);
@@ -51,6 +52,8 @@ export async function POST(req, { params }) {
       });
     }
     const likeCount = await LikeService.getLikeCount(pollId);
+    await broadcastToPoll(pollId, userId);
+
     return Response.json(
       ApiResponse.success(
         {

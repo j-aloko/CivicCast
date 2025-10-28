@@ -3,100 +3,72 @@ import { getServerSession } from "next-auth/next";
 import authOptions from "@/lib/auth/options";
 import { LikeService } from "@/lib/db/services/like-service";
 import { PollService } from "@/lib/db/services/poll-service";
-import { ApiResponse, handleApiError } from "@/lib/utils/api-response";
+import { ApiResponse } from "@/lib/utils/api-response";
+import { registerStream } from "@/lib/utils/sse-manager";
 
-export async function GET(req, { params }) {
-  const { id: pollId } = params;
+export const GET = async (req, { params }) => {
+  const { id: pollId } = await params;
   const session = await getServerSession(authOptions);
+  const userId = session?.user?.id ?? null;
 
-  try {
-    const userId = session?.user?.id || null;
-    const poll = await PollService.getPoll(pollId, userId);
-    if (!poll) {
-      return new Response(
-        `data: ${JSON.stringify(ApiResponse.notFound())}\n\n`,
-        {
-          headers: {
-            "Cache-Control": "no-cache",
-            Connection: "keep-alive",
-            "Content-Type": "text/event-stream",
-          },
-          status: 200,
-        }
-      );
-    }
-
-    const encoder = new TextEncoder();
-    let intervalId;
-    const stream = new ReadableStream({
-      cancel() {
-        if (intervalId) {
-          clearInterval(intervalId);
-        }
-        console.log("Live stream disconnected for poll:", pollId);
-      },
-      async start(controller) {
+  const stream = new ReadableStream({
+    start(ctrl) {
+      const enc = new TextEncoder();
+      ctrl.userId = userId;
+      const safeEnqueue = (data) => {
         try {
-          const results = await PollService.getPollResults(pollId);
-          const likeCount = await LikeService.getLikeCount(pollId);
+          if (ctrl.desiredSize !== null) {
+            ctrl.enqueue(enc.encode(data));
+          }
+        } catch {}
+      };
 
-          const initialData = {
+      (async () => {
+        try {
+          const [results, likeCount, currentPoll, userLike] = await Promise.all(
+            [
+              PollService.getPollResults(pollId),
+              LikeService.getLikeCount(pollId),
+              PollService.getPoll(pollId, userId),
+              userId ? LikeService.getUserLike(pollId, userId) : null,
+            ]
+          );
+
+          const init = ApiResponse.success({
             likeCount,
-            poll,
+            poll: currentPoll,
             results,
-          };
+            timestamp: new Date().toISOString(),
+            totalVotes: results.totalVotes,
+            userLiked: !!userLike,
+          });
 
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify(ApiResponse.success(initialData))}\n\n`
-            )
+          safeEnqueue(`data: ${JSON.stringify(init)}\n\n`);
+        } catch {
+          safeEnqueue(
+            `data: ${JSON.stringify(ApiResponse.error("Init failed"))}\n\n`
           );
-          intervalId = setInterval(async () => {
-            try {
-              const updatedResults = await PollService.getPollResults(pollId);
-              const updatedLikeCount = await LikeService.getLikeCount(pollId);
-
-              const updateData = {
-                likeCount: updatedLikeCount,
-                results: updatedResults,
-              };
-
-              controller.enqueue(
-                encoder.encode(
-                  `data: ${JSON.stringify(ApiResponse.success(updateData))}\n\n`
-                )
-              );
-            } catch (error) {
-              console.error("Live update error:", error);
-              controller.enqueue(
-                encoder.encode(
-                  `data: ${JSON.stringify(ApiResponse.error("Failed to fetch updates"))}\n\n`
-                )
-              );
-            }
-          }, 3000);
-        } catch (error) {
-          console.error("Stream start error:", error);
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify(ApiResponse.error("Failed to initialize live updates"))}\n\n`
-            )
-          );
-          controller.close();
         }
-      },
-    });
-    return new Response(stream, {
-      headers: {
-        "Access-Control-Allow-Headers": "Cache-Control",
-        "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-        "Content-Encoding": "none",
-        "Content-Type": "text/event-stream",
-      },
-    });
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+      })();
+
+      // Register controller
+      registerStream(pollId, ctrl);
+
+      const heartbeat = setInterval(() => {
+        safeEnqueue(`data: {"heartbeat":true}\n\n`);
+      }, 15_000);
+
+      req.signal.addEventListener("abort", () => {
+        clearInterval(heartbeat);
+      });
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "Content-Type": "text/event-stream",
+    },
+  });
+};

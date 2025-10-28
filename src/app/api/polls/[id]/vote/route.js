@@ -5,13 +5,14 @@ import { NotificationService } from "@/lib/db/services/notification-service";
 import { PollService } from "@/lib/db/services/poll-service";
 import { VoteService } from "@/lib/db/services/vote-service";
 import { ApiResponse, handleApiError } from "@/lib/utils/api-response";
+import { broadcastToPoll } from "@/lib/utils/sse-manager";
 
 export async function GET(req, { params }) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return Response.json(ApiResponse.unauthorized(), { status: 401 });
   }
-  const { id: pollId } = params;
+  const { id: pollId } = await params;
   const userId = session.user.id;
   try {
     const vote = await VoteService.getUserVote(pollId, userId);
@@ -26,7 +27,7 @@ export async function POST(req, { params }) {
   if (!session) {
     return Response.json(ApiResponse.unauthorized(), { status: 401 });
   }
-  const { id: pollId } = params;
+  const { id: pollId } = await params;
   const userId = session.user.id;
   try {
     const body = await req.json();
@@ -41,7 +42,7 @@ export async function POST(req, { params }) {
     }
     const vote = await VoteService.submitVote(pollId, optionId, userId);
     const poll = await PollService.getPoll(pollId, userId);
-    // Create notification for poll creator (if not voting on own poll)
+
     if (poll.creatorId !== userId) {
       await NotificationService.createNotification({
         actorId: userId,
@@ -50,6 +51,8 @@ export async function POST(req, { params }) {
         userId: poll.creatorId,
       });
     }
+
+    await broadcastToPoll(pollId);
 
     return Response.json(
       ApiResponse.success(

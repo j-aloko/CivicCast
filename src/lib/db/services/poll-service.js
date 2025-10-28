@@ -76,9 +76,7 @@ export class PollService {
         options: {
           include: {
             _count: {
-              select: {
-                votes: true,
-              },
+              select: { votes: true },
             },
           },
           orderBy: { order: "asc" },
@@ -93,7 +91,6 @@ export class PollService {
 
     if (!poll) return null;
 
-    // Calculate percentages and transform data
     const totalVotes = poll._count.votes;
     const optionsWithStats = poll.options.map((option) => ({
       ...option,
@@ -108,6 +105,54 @@ export class PollService {
       userLiked: poll.likes.length > 0,
       userVote: poll.votes[0] || null,
     };
+  }
+
+  static async getPollResults(pollId) {
+    const options = await prisma.pollOption.findMany({
+      orderBy: { order: "asc" },
+      select: {
+        _count: { select: { votes: true } },
+        description: true,
+        id: true,
+        image: true,
+        order: true,
+        text: true,
+      },
+      where: { pollId },
+    });
+    const totalVotes = options.reduce((sum, o) => sum + o._count.votes, 0);
+    const formatted = options.map((opt) => ({
+      description: opt.description,
+      id: opt.id,
+      image: opt.image,
+      order: opt.order,
+      percentage: totalVotes > 0 ? (opt._count.votes / totalVotes) * 100 : 0,
+      text: opt.text,
+      voteCount: opt._count.votes,
+    }));
+
+    return {
+      options: formatted,
+      totalVotes,
+    };
+  }
+
+  static async getPollForBroadcast(pollId) {
+    return prisma.poll.findUnique({
+      select: {
+        closesAt: true,
+        createdAt: true,
+        creatorId: true,
+        description: true,
+        id: true,
+        isActive: true,
+        isPublic: true,
+        question: true,
+        settings: true,
+        updatedAt: true,
+      },
+      where: { id: pollId },
+    });
   }
 
   static async getPolls(page = 1, limit = 10, userId = null) {
@@ -191,7 +236,6 @@ export class PollService {
   }
 
   static async updatePoll(id, userId, data) {
-    // Verify ownership
     const poll = await prisma.poll.findFirst({
       where: { creatorId: userId, id },
     });
@@ -200,9 +244,7 @@ export class PollService {
       throw new Error("Poll not found or access denied");
     }
 
-    // Start a transaction to update poll and options
     return prisma.$transaction(async (tx) => {
-      // Update poll
       const updatedPoll = await tx.poll.update({
         data: {
           closesAt: data.closesAt,
@@ -215,12 +257,10 @@ export class PollService {
         where: { id },
       });
 
-      // Delete existing options
       await tx.pollOption.deleteMany({
         where: { pollId: id },
       });
 
-      // Create new options
       await tx.pollOption.createMany({
         data: data.options.map((opt, index) => ({
           description: opt.description,
@@ -236,7 +276,6 @@ export class PollService {
   }
 
   static async deletePoll(id, userId) {
-    // Verify ownership
     const poll = await prisma.poll.findFirst({
       where: { creatorId: userId, id },
     });
@@ -248,48 +287,6 @@ export class PollService {
     return prisma.poll.delete({
       where: { id },
     });
-  }
-
-  static async getPollResults(pollId) {
-    const poll = await prisma.poll.findUnique({
-      include: {
-        _count: {
-          select: {
-            votes: true,
-          },
-        },
-        options: {
-          include: {
-            _count: {
-              select: {
-                votes: true,
-              },
-            },
-          },
-          orderBy: { order: "asc" },
-        },
-      },
-      where: { id: pollId },
-    });
-
-    if (!poll) {
-      throw new Error("Poll not found");
-    }
-
-    const totalVotes = poll._count.votes;
-    const results = poll.options.map((option) => ({
-      description: option.description,
-      id: option.id,
-      image: option.image,
-      percentage: totalVotes > 0 ? (option._count.votes / totalVotes) * 100 : 0,
-      text: option.text,
-      voteCount: option._count.votes,
-    }));
-
-    return {
-      results,
-      totalVotes,
-    };
   }
 
   static async recordPollView(pollId, userId, ipAddress, userAgent) {
