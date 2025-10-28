@@ -5,21 +5,20 @@ export default withAuth(function middleware() {}, {
     authorized: ({ token, req }) => {
       const { pathname } = req.nextUrl;
       if (["/auth/signin", "/auth/signup"].includes(pathname)) {
-        return !token;
+        return true;
       }
-      const protectedRoutes = ["/polls/create", "/dashboard", "/polls/[id]"];
-      const isProtectedRoute = protectedRoutes.some((route) => {
-        if (route.includes("[id]")) {
+      const protectedPatterns = ["/polls/create", "/dashboard", "/polls/:id*"];
+      const isProtected = protectedPatterns.some((pattern) => {
+        if (pattern === "/polls/:id*") {
           return pathname.startsWith("/polls/") && pathname !== "/polls";
         }
-        return pathname === route;
+        return pathname === pattern || pathname.startsWith(`${pattern}/`);
       });
-
-      if (isProtectedRoute) {
-        return !!token;
-      }
-      return true;
+      return isProtected ? !!token : true;
     },
+  },
+  pages: {
+    signIn: "/auth/signin",
   },
 });
 
