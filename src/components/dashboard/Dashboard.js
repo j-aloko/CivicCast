@@ -45,7 +45,7 @@ function Dashboard({ session, stats, polls, isLoading, hasPolls }) {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ mb: 4, py: 4 }}>
       <WelcomeSection session={session} />
       <StatsSection stats={stats} />
       <Grid container spacing={4}>
@@ -111,11 +111,7 @@ const StatsSection = React.memo(({ stats }) => (
 StatsSection.displayName = "StatsSection";
 
 const RecentPollsSection = React.memo(({ polls, hasPolls }) => (
-  <Box
-    sx={{
-      mb: 4,
-    }}
-  >
+  <>
     <Box
       sx={{
         display: "flex",
@@ -128,7 +124,7 @@ const RecentPollsSection = React.memo(({ polls, hasPolls }) => (
     </Box>
 
     {!hasPolls ? <EmptyPollsState /> : <PollsGrid polls={polls} />}
-  </Box>
+  </>
 ));
 
 RecentPollsSection.displayName = "RecentPollsSection";
