@@ -2,7 +2,7 @@ import React from "react";
 
 import { Container, Box, Typography } from "@mui/material";
 
-import PollList from "@/components/polls/PollList";
+import PollListContainer from "@/containers/poll-list-container/PollListContainer";
 
 export const metadata = {
   description: "Discover and vote on interesting polls",
@@ -20,7 +20,7 @@ function PollsPage() {
           Discover interesting polls and share your opinion.
         </Typography>
       </Box>
-      <PollList />
+      <PollListContainer />
     </Container>
   );
 }

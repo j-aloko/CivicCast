@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 
 import {
   Google as GoogleIcon,
@@ -16,32 +16,101 @@ import {
   Alert,
 } from "@mui/material";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
 
 import { ROUTES } from "@/constant/constant";
 
-function SignIn() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+const OAuthButton = React.memo(({ icon, label, onClick, disabled, styles }) => (
+  <Button
+    variant="outlined"
+    fullWidth
+    startIcon={icon}
+    onClick={onClick}
+    disabled={disabled}
+    sx={styles}
+  >
+    {label}
+  </Button>
+));
 
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || ROUTES.dashboard;
+OAuthButton.displayName = "OAuthButton";
 
-  const handleOAuthSignIn = async (provider) => {
-    setIsLoading(true);
-    setError("");
+const AuthHeader = React.memo(({ title, subtitle }) => (
+  <>
+    <Typography
+      variant="h5"
+      component="h1"
+      align="center"
+      gutterBottom
+      sx={{ color: "primary.main", fontWeight: 700 }}
+    >
+      {title}
+    </Typography>
+    <Typography
+      variant="body1"
+      align="center"
+      color="text.secondary"
+      sx={{ mb: 4 }}
+    >
+      {subtitle}
+    </Typography>
+  </>
+));
 
-    try {
-      await signIn(provider, {
-        callbackUrl,
-        redirect: true,
-      });
-    } catch {
-      console.error("Sign in error:", error);
-      setError("Failed to sign in");
-      setIsLoading(false);
-    }
+AuthHeader.displayName = "AuthHeader";
+
+const AuthFooter = React.memo(({ text, linkText, href }) => (
+  <Box textAlign="center">
+    <Typography variant="body2" color="text.secondary">
+      {text}{" "}
+      <Button
+        component={Link}
+        href={href}
+        sx={{
+          "&:hover": {
+            textDecoration: "underline",
+          },
+          color: "primary.main",
+          textDecoration: "none",
+        }}
+      >
+        {linkText}
+      </Button>
+    </Typography>
+  </Box>
+));
+
+AuthFooter.displayName = "AuthFooter";
+
+function SignIn({ isLoading, error, onGoogleSignIn, onGitHubSignIn }) {
+  const oauthButtonStyles = {
+    "&:hover": {
+      backgroundColor: "#f8f9fa",
+    },
+    backgroundColor: "#ffffff",
+    borderColor: "#dadce0",
+    color: "#3c4043",
+    fontSize: "0.875rem",
+    fontWeight: 500,
+    py: 1.5,
+    textTransform: "none",
+  };
+
+  const googleButtonStyles = {
+    ...oauthButtonStyles,
+    "&:hover": {
+      ...oauthButtonStyles["&:hover"],
+      borderColor: "#4285f4",
+      boxShadow: "0 1px 3px rgba(66, 133, 244, 0.3)",
+    },
+  };
+
+  const githubButtonStyles = {
+    ...oauthButtonStyles,
+    "&:hover": {
+      ...oauthButtonStyles["&:hover"],
+      borderColor: "#1f2328",
+      boxShadow: "0 1px 3px rgba(31, 35, 40, 0.3)",
+    },
   };
 
   return (
@@ -63,23 +132,7 @@ function SignIn() {
         }}
       >
         <CardContent sx={{ p: 4 }}>
-          <Typography
-            variant="h5"
-            component="h1"
-            align="center"
-            gutterBottom
-            sx={{ color: "primary.main", fontWeight: 700 }}
-          >
-            Welcome Back
-          </Typography>
-          <Typography
-            variant="body1"
-            align="center"
-            color="text.secondary"
-            sx={{ mb: 4 }}
-          >
-            Sign in to your account
-          </Typography>
+          <AuthHeader title="Welcome Back" subtitle="Sign in to your account" />
 
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
@@ -88,79 +141,36 @@ function SignIn() {
           )}
 
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 3 }}>
-            <Button
-              variant="outlined"
-              fullWidth
-              startIcon={<GoogleIcon />}
-              onClick={() => handleOAuthSignIn("google")}
+            <OAuthButton
+              provider="google"
+              icon={<GoogleIcon />}
+              label="Continue with Google"
+              onClick={onGoogleSignIn}
               disabled={isLoading}
-              sx={{
-                "&:hover": {
-                  backgroundColor: "#f8f9fa",
-                  borderColor: "#4285f4",
-                  boxShadow: "0 1px 3px rgba(66, 133, 244, 0.3)",
-                },
-                backgroundColor: "#ffffff",
-                borderColor: "#dadce0",
-                color: "#3c4043",
-                fontSize: "0.875rem",
-                fontWeight: 500,
-                py: 1.5,
-                textTransform: "none",
-              }}
-            >
-              Continue with Google
-            </Button>
+              styles={googleButtonStyles}
+            />
 
-            <Button
-              variant="outlined"
-              fullWidth
-              startIcon={<GitHubIcon />}
-              onClick={() => handleOAuthSignIn("github")}
+            <OAuthButton
+              provider="github"
+              icon={<GitHubIcon />}
+              label="Continue with GitHub"
+              onClick={onGitHubSignIn}
               disabled={isLoading}
-              sx={{
-                "&:hover": {
-                  backgroundColor: "#f6f8fa",
-                  borderColor: "#1f2328",
-                  boxShadow: "0 1px 3px rgba(31, 35, 40, 0.3)",
-                },
-                backgroundColor: "#ffffff",
-                borderColor: "#d0d7de",
-                color: "#1f2328",
-                fontSize: "0.875rem",
-                fontWeight: 500,
-                py: 1.5,
-                textTransform: "none",
-              }}
-            >
-              Continue with GitHub
-            </Button>
+              styles={githubButtonStyles}
+            />
           </Box>
 
           <Divider sx={{ my: 3 }} />
 
-          <Box textAlign="center">
-            <Typography variant="body2" color="text.secondary">
-              Don&apos;t have an account?{" "}
-              <Button
-                component={Link}
-                href={ROUTES.signup}
-                sx={{
-                  "&:hover": {
-                    textDecoration: "underline",
-                  },
-                  color: "primary.main",
-                  textDecoration: "none",
-                }}
-              >
-                Sign up
-              </Button>
-            </Typography>
-          </Box>
+          <AuthFooter
+            text="Don't have an account?"
+            linkText="Sign up"
+            href={ROUTES.signup}
+          />
         </CardContent>
       </Card>
     </Box>
   );
 }
 
-export default SignIn;
+export default React.memo(SignIn);

@@ -9,7 +9,7 @@ function StatsSection() {
   const stats = [
     { label: "Polls Created", value: "10,000+" },
     { label: "Votes Cast", value: "500,000+" },
-    { label: "Real-time Update Latency", value: "~3s" },
+    { label: "Real-time Update Latency", value: "~1s" },
   ];
 
   return (

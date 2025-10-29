@@ -2,7 +2,7 @@ import React from "react";
 
 import { Container, Box, Typography } from "@mui/material";
 
-import CreatePoll from "@/components/polls/CreatePoll";
+import CreatePollContainer from "@/containers/create-poll-container/CreatePollContainer";
 
 export const metadata = {
   description: "Create a new poll to gather insights",
@@ -20,7 +20,7 @@ function CreatePollPage() {
           Create engaging polls to gather real-time insights from your audience.
         </Typography>
       </Box>
-      <CreatePoll />
+      <CreatePollContainer />
     </Container>
   );
 }

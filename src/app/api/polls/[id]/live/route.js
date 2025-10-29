@@ -41,6 +41,7 @@ export const GET = async (req, { params }) => {
             timestamp: new Date().toISOString(),
             totalVotes: results.totalVotes,
             userLiked: !!userLike,
+            userVote: currentPoll.userVote || null,
           });
 
           safeEnqueue(`data: ${JSON.stringify(init)}\n\n`);
@@ -51,7 +52,6 @@ export const GET = async (req, { params }) => {
         }
       })();
 
-      // Register controller
       registerStream(pollId, ctrl);
 
       const heartbeat = setInterval(() => {

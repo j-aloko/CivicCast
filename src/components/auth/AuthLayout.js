@@ -1,12 +1,41 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 import { ArrowBack } from "@mui/icons-material";
 import { Box, Container, Button } from "@mui/material";
-import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 
 function AuthLayout({ children }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [hasHistory, setHasHistory] = useState(false);
+
+  useEffect(() => {
+    setHasHistory(window.history.length > 1);
+  }, []);
+
+  const handleGoBack = () => {
+    const callbackUrl = searchParams.get("callbackUrl");
+    if (callbackUrl) {
+      router.push(callbackUrl);
+      return;
+    }
+
+    if (hasHistory) {
+      router.back();
+    } else {
+      router.push("/");
+    }
+  };
+
+  const getButtonText = () => {
+    if (hasHistory) {
+      return "Go Back";
+    }
+    return "Back to Home";
+  };
+
   return (
     <Box
       sx={{
@@ -31,8 +60,7 @@ function AuthLayout({ children }) {
             }}
           >
             <Button
-              component={Link}
-              href="/"
+              onClick={handleGoBack}
               startIcon={<ArrowBack />}
               sx={{
                 "&:hover": {
@@ -42,7 +70,7 @@ function AuthLayout({ children }) {
                 textDecoration: "none",
               }}
             >
-              Back to Home
+              {getButtonText()}
             </Button>
           </Box>
         </Container>
@@ -52,4 +80,4 @@ function AuthLayout({ children }) {
   );
 }
 
-export default AuthLayout;
+export default React.memo(AuthLayout);

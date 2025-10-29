@@ -4,6 +4,10 @@ import { useDispatch, useSelector, useStore } from "react-redux";
 import { persistReducer, persistStore } from "redux-persist";
 import { CookieStorage } from "redux-persist-cookie-storage";
 
+import { realtimeService } from "@/lib/utils/realtime-service";
+
+import { createDashboardRealtimeMiddleware } from "./middleware/dashboardRealtimeMiddleware";
+import { createRealtimeMiddleware } from "./middleware/realtimeMiddleware";
 import { authReducer } from "./slices/authSlice";
 import { pollsReducer } from "./slices/pollsSlice";
 import { realtimeReducer } from "./slices/realtimeSlice";
@@ -30,6 +34,9 @@ const rootReducer = combineReducers({
   ui: uiReducer,
 });
 
+const dashboardMiddleware = createDashboardRealtimeMiddleware(realtimeService);
+const pollMiddleware = createRealtimeMiddleware(realtimeService);
+
 export const store = configureStore({
   devTools: process.env.NODE_ENV !== "production",
   middleware: (getDefaultMiddleware) =>
@@ -43,9 +50,11 @@ export const store = configureStore({
         ],
         ignoredPaths: ["realtime.socket", "register", "rehydrate"],
       },
-    }),
+    }).concat(pollMiddleware, dashboardMiddleware),
   reducer: rootReducer,
 });
+
+realtimeService.initialize(store, store.dispatch);
 
 export const persistor = persistStore(store);
 

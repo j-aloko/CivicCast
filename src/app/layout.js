@@ -5,7 +5,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import PropTypes from "prop-types";
 
-import Header from "@/components/header/Header";
+import HeaderContainer from "@/containers/header-container/HeaderContainer";
 
 import { Providers } from "./providers";
 import theme from "./theme";
@@ -24,7 +24,7 @@ export default function RootLayout({ children }) {
           <ThemeProvider theme={theme}>
             <CssBaseline />
             <Providers>
-              <Header />
+              <HeaderContainer />
               {children}
             </Providers>
           </ThemeProvider>

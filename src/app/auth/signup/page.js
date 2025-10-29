@@ -1,7 +1,7 @@
 import React from "react";
 
 import AuthLayout from "@/components/auth/AuthLayout";
-import SignUp from "@/components/sign-up/SignUp";
+import SignUpContainer from "@/containers/signup-container/SignUpContainer";
 
 export const metadata = {
   description: "Create a new CivicCast account",
@@ -11,7 +11,7 @@ export const metadata = {
 function SignUpPage() {
   return (
     <AuthLayout>
-      <SignUp />
+      <SignUpContainer />
     </AuthLayout>
   );
 }

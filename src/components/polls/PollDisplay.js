@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 
 import {
   HowToVote,
@@ -25,84 +25,288 @@ import {
   CircularProgress,
 } from "@mui/material";
 
-import { usePolls } from "@/hooks/usePolls";
-import { useRealtime } from "@/hooks/useRealtime";
+import LikeButtonContainer from "@/containers/like-button-container/LikeButtonContainer";
 
-import LikeButton from "./LikeButton";
+const PollHeader = React.memo(({ currentPoll, isConnected, onRefreshPoll }) => (
+  <Box
+    sx={{
+      alignItems: "flex-start",
+      display: "flex",
+      justifyContent: "space-between",
+      mb: 2,
+    }}
+  >
+    <Box sx={{ flex: 1 }}>
+      <Box sx={{ alignItems: "center", display: "flex", gap: 1, mb: 1 }}>
+        <Typography variant="h4" component="h1">
+          {currentPoll.question}
+        </Typography>
+        {isConnected && (
+          <Tooltip title="Live updates active">
+            <Chip
+              icon={<LiveTv />}
+              label="LIVE"
+              color="success"
+              size="small"
+              variant="outlined"
+              sx={{
+                "& .MuiChip-icon": {
+                  marginLeft: 0,
+                  marginRight: "4px",
+                },
+                "& .MuiChip-label": {
+                  paddingTop: "2.5px",
+                },
+                padding: "0 8px",
+              }}
+            />
+          </Tooltip>
+        )}
+        {!isConnected && (
+          <Tooltip title="Live updates disconnected">
+            <Chip
+              icon={<LiveTv />}
+              label="OFFLINE"
+              color="default"
+              size="small"
+              variant="outlined"
+              sx={{
+                "& .MuiChip-icon": {
+                  marginLeft: 0,
+                  marginRight: "4px",
+                },
+                "& .MuiChip-label": {
+                  paddingTop: "2.5px",
+                },
+                padding: "0 8px",
+              }}
+            />
+          </Tooltip>
+        )}
+      </Box>
+      {currentPoll.description && (
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+          {currentPoll.description}
+        </Typography>
+      )}
+    </Box>
 
-function PollDisplay({ pollId }) {
-  const { currentPoll, getPoll, voteOnPoll, isAuthenticated, isLoading } =
-    usePolls();
-  const { isConnected } = useRealtime(pollId);
+    <Box sx={{ alignItems: "center", display: "flex", gap: 1 }}>
+      <LikeButtonContainer pollId={currentPoll.id} isConnected />
+      <Tooltip title="Refresh poll data">
+        <IconButton onClick={onRefreshPoll} size="small">
+          <Refresh />
+        </IconButton>
+      </Tooltip>
+    </Box>
+  </Box>
+));
 
-  const [selectedOption, setSelectedOption] = useState(null);
-  const [hasVoted, setHasVoted] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [userManuallyToggledResults, setUserManuallyToggledResults] =
-    useState(false);
-  const [isVoting, setIsVoting] = useState(false);
+PollHeader.displayName = "PollHeader";
 
-  useEffect(() => {
-    if (pollId) {
-      getPoll(pollId);
-    }
-  }, [pollId, getPoll]);
+const PollStats = React.memo(
+  ({ currentPoll, totalVotes, hasVoted, isPollClosed }) => (
+    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
+      <Chip label={`${totalVotes} votes`} variant="outlined" size="small" />
+      <Chip
+        label={`${currentPoll._count?.likes || 0} likes`}
+        variant="outlined"
+        size="small"
+      />
+      {!currentPoll.isPublic && (
+        <Chip label="Private" color="secondary" size="small" />
+      )}
+      {currentPoll.closesAt && (
+        <Chip
+          label={
+            isPollClosed
+              ? `Closed ${new Date(currentPoll.closesAt).toLocaleDateString()}`
+              : `Closes ${new Date(currentPoll.closesAt).toLocaleDateString()}`
+          }
+          color={isPollClosed ? "error" : "primary"}
+          size="small"
+          variant="outlined"
+        />
+      )}
+      {hasVoted && <Chip label="Voted" color="success" size="small" />}
+    </Box>
+  )
+);
 
-  useEffect(() => {
-    if (currentPoll) {
-      const userHasVoted = !!currentPoll.userVote;
-      setHasVoted(userHasVoted);
+PollStats.displayName = "PollStats";
 
-      if (!userManuallyToggledResults) {
-        const shouldShowResults =
-          currentPoll.settings?.showResults || userHasVoted;
-        setShowResults(shouldShowResults);
-      }
+const ResultsToggle = React.memo(({ showResults, onResultsToggle }) => (
+  <Card sx={{ mb: 3 }}>
+    <CardContent>
+      <Box
+        sx={{
+          alignItems: "center",
+          display: "flex",
+          justifyContent: "space-between",
+        }}
+      >
+        <Typography variant="h6" component="div">
+          View Options
+        </Typography>
+        <ButtonGroup variant="outlined" size="small">
+          <Button
+            startIcon={<Visibility />}
+            onClick={() => onResultsToggle(true)}
+            variant={showResults ? "contained" : "outlined"}
+            sx={{
+              "&:hover": {
+                backgroundColor: showResults ? "primary.dark" : "action.hover",
+              },
+              backgroundColor: showResults ? "primary.main" : "transparent",
+              minWidth: 120,
+            }}
+          >
+            Results
+          </Button>
+          <Button
+            startIcon={<VisibilityOff />}
+            onClick={() => onResultsToggle(false)}
+            variant={!showResults ? "contained" : "outlined"}
+            sx={{
+              "&:hover": {
+                backgroundColor: !showResults ? "primary.dark" : "action.hover",
+              },
+              backgroundColor: !showResults ? "primary.main" : "transparent",
+              minWidth: 120,
+            }}
+          >
+            Vote Only
+          </Button>
+        </ButtonGroup>
+      </Box>
+    </CardContent>
+  </Card>
+));
 
-      if (currentPoll.userVote) {
-        setSelectedOption(currentPoll.userVote.optionId);
-      }
-    }
-  }, [currentPoll, userManuallyToggledResults]);
+ResultsToggle.displayName = "ResultsToggle";
 
-  const handleVote = async () => {
-    if (!selectedOption || !isAuthenticated || isVoting) return;
-    setIsVoting(true);
-    try {
-      await voteOnPoll(pollId, selectedOption);
-      setHasVoted(true);
-    } catch (error) {
-      console.error("Error voting:", error);
-    } finally {
-      setIsVoting(false);
-    }
-  };
+const OptionResult = React.memo(({ option, percentage, isUserVote }) => (
+  <Box key={option.id} sx={{ mb: 2 }}>
+    <Box
+      sx={{
+        alignItems: "center",
+        display: "flex",
+        justifyContent: "space-between",
+        mb: 1,
+      }}
+    >
+      <Box sx={{ alignItems: "center", display: "flex" }}>
+        <Typography variant="body1" component="span">
+          {option.text}
+        </Typography>
+        {isUserVote && (
+          <Chip label="Your vote" size="small" color="primary" sx={{ ml: 1 }} />
+        )}
+      </Box>
+      <Typography variant="body1" fontWeight="bold" component="span">
+        {percentage.toFixed(1)}%
+      </Typography>
+    </Box>
+    <LinearProgress
+      variant="determinate"
+      value={percentage}
+      sx={{
+        "& .MuiLinearProgress-bar": {
+          backgroundColor: isUserVote ? "primary.main" : "accent.main",
+          borderRadius: 4,
+          transition: "transform 0.5s ease-in-out",
+        },
+        backgroundColor: "grey.200",
+        borderRadius: 4,
+        height: 8,
+      }}
+    />
+    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+      {option.voteCount} votes
+    </Typography>
+  </Box>
+));
 
-  const getVoteButtonText = () => {
-    if (isVoting) return "Voting...";
-    if (hasVoted) return "Change Vote";
-    return "Submit Vote";
-  };
+OptionResult.displayName = "OptionResult";
 
-  const handleResultsToggle = (show) => {
-    setShowResults(show);
-    setUserManuallyToggledResults(true);
-  };
+// Extracted Voting Interface Component
+const VotingInterface = React.memo(
+  ({
+    currentPoll,
+    canVote,
+    selectedOption,
+    isVoting,
+    hasVoted,
+    onOptionSelect,
+    onVote,
+  }) => {
+    if (!canVote) return null;
 
-  const handleRefreshPoll = () => {
-    getPoll(pollId);
-  };
+    const getVoteButtonText = () => {
+      if (isVoting) return "Voting...";
+      if (hasVoted) return "Change Vote";
+      return "Submit Vote";
+    };
 
-  const isPollClosed =
-    currentPoll?.closesAt && new Date(currentPoll.closesAt) <= new Date();
-  const canVote =
-    isAuthenticated &&
-    !isPollClosed &&
-    (!hasVoted || currentPoll?.settings?.allowMultiple);
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom>
+          Cast Your Vote
+        </Typography>
+        {currentPoll.options.map((option) => (
+          <Button
+            key={option.id}
+            fullWidth
+            variant={selectedOption === option.id ? "contained" : "outlined"}
+            onClick={() => onOptionSelect(option.id)}
+            disabled={isVoting}
+            sx={{
+              justifyContent: "flex-start",
+              mb: 1,
+              py: 1.5,
+              textAlign: "left",
+            }}
+          >
+            {option.text}
+          </Button>
+        ))}
 
-  const totalVotes =
-    currentPoll?.options?.reduce((sum, opt) => sum + opt.voteCount, 0) || 0;
+        <Button
+          variant="contained"
+          fullWidth
+          size="large"
+          onClick={onVote}
+          disabled={!selectedOption || isVoting}
+          startIcon={isVoting ? <CircularProgress size={20} /> : <HowToVote />}
+          sx={{ mt: 2 }}
+        >
+          {getVoteButtonText()}
+        </Button>
+      </Box>
+    );
+  }
+);
 
+VotingInterface.displayName = "VotingInterface";
+
+// Main PollDisplay Component
+function PollDisplay({
+  currentPoll,
+  isConnected,
+  isLoading,
+  isAuthenticated,
+  isPollClosed,
+  canVote,
+  hasVoted,
+  showResults,
+  selectedOption,
+  isVoting,
+  totalVotes,
+  onVote,
+  onOptionSelect,
+  onResultsToggle,
+  onRefreshPoll,
+}) {
   if (isLoading && !currentPoll) {
     return (
       <Card>
@@ -138,7 +342,7 @@ function PollDisplay({ pollId }) {
             <Button
               color="inherit"
               size="small"
-              onClick={handleRefreshPoll}
+              onClick={onRefreshPoll}
               startIcon={<Refresh />}
             >
               Refresh
@@ -151,94 +355,18 @@ function PollDisplay({ pollId }) {
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Box
-            sx={{
-              alignItems: "flex-start",
-              display: "flex",
-              justifyContent: "space-between",
-              mb: 2,
-            }}
-          >
-            <Box sx={{ flex: 1 }}>
-              <Box
-                sx={{ alignItems: "center", display: "flex", gap: 1, mb: 1 }}
-              >
-                <Typography variant="h4" component="h1">
-                  {currentPoll.question}
-                </Typography>
-                {isConnected && (
-                  <Tooltip title="Live updates active">
-                    <Chip
-                      icon={<LiveTv />}
-                      label="LIVE"
-                      color="success"
-                      size="small"
-                      variant="outlined"
-                    />
-                  </Tooltip>
-                )}
-                {!isConnected && (
-                  <Tooltip title="Live updates disconnected">
-                    <Chip
-                      icon={<LiveTv />}
-                      label="OFFLINE"
-                      color="default"
-                      size="small"
-                      variant="outlined"
-                    />
-                  </Tooltip>
-                )}
-              </Box>
+          <PollHeader
+            currentPoll={currentPoll}
+            isConnected={isConnected}
+            onRefreshPoll={onRefreshPoll}
+          />
 
-              {currentPoll.description && (
-                <Typography
-                  variant="body1"
-                  color="text.secondary"
-                  sx={{ mb: 2 }}
-                >
-                  {currentPoll.description}
-                </Typography>
-              )}
-            </Box>
-
-            <Box sx={{ alignItems: "center", display: "flex", gap: 1 }}>
-              <LikeButton pollId={pollId} />
-              <Tooltip title="Refresh poll data">
-                <IconButton onClick={handleRefreshPoll} size="small">
-                  <Refresh />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Box>
-
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
-            <Chip
-              label={`${totalVotes} votes`}
-              variant="outlined"
-              size="small"
-            />
-            <Chip
-              label={`${currentPoll._count?.likes || 0} likes`}
-              variant="outlined"
-              size="small"
-            />
-            {!currentPoll.isPublic && (
-              <Chip label="Private" color="secondary" size="small" />
-            )}
-            {currentPoll.closesAt && (
-              <Chip
-                label={
-                  isPollClosed
-                    ? `Closed ${new Date(currentPoll.closesAt).toLocaleDateString()}`
-                    : `Closes ${new Date(currentPoll.closesAt).toLocaleDateString()}`
-                }
-                color={isPollClosed ? "error" : "primary"}
-                size="small"
-                variant="outlined"
-              />
-            )}
-            {hasVoted && <Chip label="Voted" color="success" size="small" />}
-          </Box>
+          <PollStats
+            currentPoll={currentPoll}
+            totalVotes={totalVotes}
+            hasVoted={hasVoted}
+            isPollClosed={isPollClosed}
+          />
 
           <Typography variant="body2" color="text.secondary">
             Created by {currentPoll.creator?.name || "Unknown"} •{" "}
@@ -247,57 +375,10 @@ function PollDisplay({ pollId }) {
         </CardContent>
       </Card>
 
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box
-            sx={{
-              alignItems: "center",
-              display: "flex",
-              justifyContent: "space-between",
-            }}
-          >
-            <Typography variant="h6" component="div">
-              View Options
-            </Typography>
-            <ButtonGroup variant="outlined" size="small">
-              <Button
-                startIcon={<Visibility />}
-                onClick={() => handleResultsToggle(true)}
-                variant={showResults ? "contained" : "outlined"}
-                sx={{
-                  "&:hover": {
-                    backgroundColor: showResults
-                      ? "primary.dark"
-                      : "action.hover",
-                  },
-                  backgroundColor: showResults ? "primary.main" : "transparent",
-                  minWidth: 120,
-                }}
-              >
-                Results
-              </Button>
-              <Button
-                startIcon={<VisibilityOff />}
-                onClick={() => handleResultsToggle(false)}
-                variant={!showResults ? "contained" : "outlined"}
-                sx={{
-                  "&:hover": {
-                    backgroundColor: !showResults
-                      ? "primary.dark"
-                      : "action.hover",
-                  },
-                  backgroundColor: !showResults
-                    ? "primary.main"
-                    : "transparent",
-                  minWidth: 120,
-                }}
-              >
-                Vote Only
-              </Button>
-            </ButtonGroup>
-          </Box>
-        </CardContent>
-      </Card>
+      <ResultsToggle
+        showResults={showResults}
+        onResultsToggle={onResultsToggle}
+      />
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
@@ -315,7 +396,7 @@ function PollDisplay({ pollId }) {
 
           {hasVoted && !currentPoll.settings?.allowMultiple && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              You have already voted on this poll.
+              You voted on this poll.
             </Alert>
           )}
 
@@ -333,6 +414,16 @@ function PollDisplay({ pollId }) {
                     label="LIVE"
                     size="small"
                     color="success"
+                    sx={{
+                      "& .MuiChip-icon": {
+                        marginLeft: 0,
+                        marginRight: "4px",
+                      },
+                      "& .MuiChip-label": {
+                        paddingTop: "2.5px",
+                      },
+                      padding: "0 8px",
+                    }}
                   />
                 )}
               </Box>
@@ -343,106 +434,28 @@ function PollDisplay({ pollId }) {
                 const isUserVote = currentPoll.userVote?.optionId === option.id;
 
                 return (
-                  <Box key={option.id} sx={{ mb: 2 }}>
-                    <Box
-                      sx={{
-                        alignItems: "center",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        mb: 1,
-                      }}
-                    >
-                      <Box sx={{ alignItems: "center", display: "flex" }}>
-                        <Typography variant="body1" component="span">
-                          {option.text}
-                        </Typography>
-                        {isUserVote && (
-                          <Chip
-                            label="Your vote"
-                            size="small"
-                            color="primary"
-                            sx={{ ml: 1 }}
-                          />
-                        )}
-                      </Box>
-                      <Typography
-                        variant="body1"
-                        fontWeight="bold"
-                        component="span"
-                      >
-                        {percentage.toFixed(1)}%
-                      </Typography>
-                    </Box>
-                    <LinearProgress
-                      variant="determinate"
-                      value={percentage}
-                      sx={{
-                        "& .MuiLinearProgress-bar": {
-                          backgroundColor: isUserVote
-                            ? "primary.main"
-                            : "accent.main",
-                          borderRadius: 4,
-                          transition: "transform 0.5s ease-in-out",
-                        },
-                        backgroundColor: "grey.200",
-                        borderRadius: 4,
-                        height: 8,
-                      }}
-                    />
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ mt: 0.5 }}
-                    >
-                      {option.voteCount} votes
-                    </Typography>
-                  </Box>
+                  <OptionResult
+                    key={option.id}
+                    option={option}
+                    percentage={percentage}
+                    totalVotes={totalVotes}
+                    isUserVote={isUserVote}
+                  />
                 );
               })}
               <Divider sx={{ my: 2 }} />
             </Box>
           )}
 
-          {canVote && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Cast Your Vote
-              </Typography>
-              {currentPoll.options.map((option) => (
-                <Button
-                  key={option.id}
-                  fullWidth
-                  variant={
-                    selectedOption === option.id ? "contained" : "outlined"
-                  }
-                  onClick={() => setSelectedOption(option.id)}
-                  disabled={isVoting}
-                  sx={{
-                    justifyContent: "flex-start",
-                    mb: 1,
-                    py: 1.5,
-                    textAlign: "left",
-                  }}
-                >
-                  {option.text}
-                </Button>
-              ))}
-
-              <Button
-                variant="contained"
-                fullWidth
-                size="large"
-                onClick={handleVote}
-                disabled={!selectedOption || isVoting}
-                startIcon={
-                  isVoting ? <CircularProgress size={20} /> : <HowToVote />
-                }
-                sx={{ mt: 2 }}
-              >
-                {getVoteButtonText()}
-              </Button>
-            </Box>
-          )}
+          <VotingInterface
+            currentPoll={currentPoll}
+            canVote={canVote}
+            selectedOption={selectedOption}
+            isVoting={isVoting}
+            hasVoted={hasVoted}
+            onOptionSelect={onOptionSelect}
+            onVote={onVote}
+          />
 
           {/* Message when user cannot vote */}
           {!canVote && isAuthenticated && !isPollClosed && hasVoted && (
@@ -454,7 +467,7 @@ function PollDisplay({ pollId }) {
             >
               {currentPoll.settings?.allowMultiple
                 ? "Select an option above to vote again"
-                : "You have already voted on this poll"}
+                : "You voted on this poll"}
             </Typography>
           )}
         </CardContent>
@@ -463,4 +476,4 @@ function PollDisplay({ pollId }) {
   );
 }
 
-export default PollDisplay;
+export default React.memo(PollDisplay);

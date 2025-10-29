@@ -1,5 +1,18 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { signOut } from "next-auth/react";
+
+export const signOutUser = createAsyncThunk(
+  "user/SignOut",
+  async (_, { rejectWithValue, dispatch }) => {
+    try {
+      await signOut({ redirect: false });
+      dispatch(logout());
+      return null;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
 
 const initialState = {
   error: null,
@@ -33,15 +46,6 @@ const authSlice = createSlice({
     },
   },
 });
-
-export const signOutUser = () => async (dispatch) => {
-  try {
-    await signOut({ redirect: false });
-    dispatch(logout());
-  } catch {
-    dispatch(setError("Failed to sign out"));
-  }
-};
 
 export const { setUser, setLoading, setError, clearError, logout } =
   authSlice.actions;

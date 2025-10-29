@@ -7,7 +7,12 @@ export default withAuth(function middleware() {}, {
       if (["/auth/signin", "/auth/signup"].includes(pathname)) {
         return true;
       }
-      const protectedPatterns = ["/polls/create", "/dashboard", "/polls/:id*"];
+      const protectedPatterns = [
+        "/polls",
+        "/polls/create",
+        "/dashboard",
+        "/polls/:id*",
+      ];
       const isProtected = protectedPatterns.some((pattern) => {
         if (pattern === "/polls/:id*") {
           return pathname.startsWith("/polls/") && pathname !== "/polls";
@@ -24,6 +29,7 @@ export default withAuth(function middleware() {}, {
 
 export const config = {
   matcher: [
+    "/polls",
     "/polls/create",
     "/dashboard",
     "/polls/:id*",

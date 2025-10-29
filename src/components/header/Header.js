@@ -6,77 +6,29 @@ import { Menu as MenuIcon } from "@mui/icons-material";
 import {
   AppBar,
   Toolbar,
-  Button,
-  Box,
-  Drawer,
-  List,
-  ListItem,
   IconButton,
+  Box,
   useTheme,
   useMediaQuery,
 } from "@mui/material";
-import Link from "next/link";
 
 import { ROUTES } from "@/constant/constant";
 
+import { DesktopMenu } from "./DesktopMenu";
+import { MobileMenu } from "./MobileMenu";
 import Logo from "../logo/Logo";
 
-function Header() {
+export const Header = React.memo(({ userData, onSignOut }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
+  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
   const menuItems = [
-    { href: "#features", label: "Features" },
-    { href: "#howitworks", label: "How It Works" },
-    { href: "#demo", label: "Live Demo" },
+    { href: ROUTES.polls, label: "View Polls" },
+    { href: ROUTES.viewLiveDemo, label: "Live Demo" },
   ];
-
-  const drawer = (
-    <Box onClick={handleDrawerToggle} sx={{ textAlign: "center" }}>
-      <Logo theme={theme} />
-      <List>
-        {menuItems.map((item) => (
-          <ListItem key={item.label} disablePadding>
-            <Button
-              href={item.href}
-              sx={{
-                "&:hover": {
-                  backgroundColor: "transparent",
-                  color: "primary.light",
-                },
-                color: "text.primary",
-                width: "100%",
-              }}
-            >
-              {item.label}
-            </Button>
-          </ListItem>
-        ))}
-        <ListItem>
-          <Box display="flex" justifyContent="center" width="100%">
-            <Button
-              variant="contained"
-              href={ROUTES.signin}
-              component={Link}
-              sx={{
-                "&:hover": {
-                  backgroundColor: "primary.light",
-                },
-                backgroundColor: "primary.main",
-              }}
-            >
-              Get Started
-            </Button>
-          </Box>
-        </ListItem>
-      </List>
-    </Box>
-  );
 
   return (
     <AppBar
@@ -87,66 +39,42 @@ function Header() {
       }}
     >
       <Toolbar sx={{ margin: "0 auto", maxWidth: "1200px", width: "100%" }}>
-        <Logo theme={theme} />
+        <Logo theme={theme} variant="h5" />
+
         {isMobile ? (
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ color: "text.primary" }}
-          >
-            <MenuIcon />
-          </IconButton>
+          <MobileMenuButton onClick={handleDrawerToggle} />
         ) : (
-          <Box sx={{ alignItems: "center", display: "flex", gap: 3 }}>
-            {menuItems.map((item) => (
-              <Button
-                key={item.label}
-                href={item.href}
-                sx={{
-                  "&:hover": {
-                    backgroundColor: "transparent",
-                    color: "primary.light",
-                  },
-                  color: "text.secondary",
-                  fontWeight: 500,
-                }}
-              >
-                {item.label}
-              </Button>
-            ))}
-            <Button
-              variant="contained"
-              href={ROUTES.signin}
-              component={Link}
-              sx={{
-                "&:hover": {
-                  backgroundColor: "primary.light",
-                },
-                backgroundColor: "primary.main",
-              }}
-            >
-              Get Started
-            </Button>
+          <Box sx={{ ml: "auto" }}>
+            <DesktopMenu
+              menuItems={menuItems}
+              userData={userData}
+              onSignOut={onSignOut}
+            />
           </Box>
         )}
       </Toolbar>
 
-      <Drawer
-        variant="temporary"
-        open={mobileOpen}
-        onClose={handleDrawerToggle}
-        ModalProps={{ keepMounted: true }}
-        sx={{
-          "& .MuiDrawer-paper": { boxSizing: "border-box", width: 240 },
-          display: { md: "none", xs: "block" },
-        }}
-      >
-        {drawer}
-      </Drawer>
+      <MobileMenu
+        mobileOpen={mobileOpen}
+        menuItems={menuItems}
+        userData={userData}
+        onDrawerToggle={handleDrawerToggle}
+        onSignOut={onSignOut}
+      />
     </AppBar>
   );
-}
+});
 
-export default Header;
+const MobileMenuButton = React.memo(({ onClick }) => (
+  <IconButton
+    color="inherit"
+    aria-label="open drawer"
+    edge="start"
+    onClick={onClick}
+    sx={{ color: "text.primary", ml: "auto" }}
+  >
+    <MenuIcon />
+  </IconButton>
+));
+
+Header.displayName = "Header";

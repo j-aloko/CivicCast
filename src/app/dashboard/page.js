@@ -2,7 +2,7 @@ import React from "react";
 
 import { getServerSession } from "next-auth/next";
 
-import Dashboard from "@/components/dashboard/Dashboard";
+import DashboardContainer from "@/containers/dashboard-container/DashboardContainer";
 import authOptions from "@/lib/auth/options";
 
 export const metadata = {
@@ -12,7 +12,7 @@ export const metadata = {
 
 async function DashboardPage() {
   const session = await getServerSession(authOptions);
-  return <Dashboard session={session} />;
+  return <DashboardContainer session={session} />;
 }
 
 export default DashboardPage;

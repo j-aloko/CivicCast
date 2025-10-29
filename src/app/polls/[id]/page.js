@@ -2,13 +2,13 @@ import React from "react";
 
 import { Container } from "@mui/material";
 
-import PollDisplay from "@/components/polls/PollDisplay";
+import PollDisplayContainer from "@/containers/poll-display-container/PollDisplayContainer";
 
 async function PollPage({ params }) {
   const { id } = await params;
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
-      <PollDisplay pollId={id} />
+      <PollDisplayContainer pollId={id} />
     </Container>
   );
 }

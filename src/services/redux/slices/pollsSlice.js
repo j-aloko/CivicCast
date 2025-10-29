@@ -149,19 +149,32 @@ const pollsSlice = createSlice({
       })
 
       // Create Poll
+      .addCase(createPoll.pending, (state) => {
+        state.isLoading = true;
+      })
       .addCase(createPoll.fulfilled, (state, action) => {
         state.polls.unshift(action.payload);
+        state.isLoading = false;
+      })
+      .addCase(createPoll.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       })
 
       // Submit Vote
+      .addCase(submitVote.pending, (state) => {
+        state.isLoading = true;
+      })
       .addCase(submitVote.fulfilled, (state, action) => {
         // Replace optimistic update with real data
         if (state.currentPoll?.id === action.payload.poll.id) {
           state.currentPoll = action.payload.poll;
         }
+        state.isLoading = false;
       })
       .addCase(submitVote.rejected, (state, action) => {
         state.error = action.payload;
+        state.isLoading = false;
         // TODO: Add rollback logic for optimistic update
       })
 
@@ -249,88 +262,19 @@ const pollsSlice = createSlice({
         poll._count.votes = results.totalVotes;
       }
     },
-
     updatePollRealtime: (state, action) => {
       const { pollId, updates } = action.payload;
-      const { poll: partialPoll = {}, results, likeCount, userLiked } = updates;
-      const mergeResults = (target) => {
-        if (!target?.options || !Array.isArray(target.options) || !results) {
-          return target;
-        }
-        const totalVotes = results.totalVotes ?? 0;
-        const newOptions = target.options.map((existingOpt) => {
-          const broadcastOpt = results.options.find(
-            (o) => o.id === existingOpt.id
-          );
-          const voteCount =
-            broadcastOpt?.voteCount ?? existingOpt.voteCount ?? 0;
-          const percentage =
-            totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0;
-          return {
-            ...existingOpt,
-            percentage,
-            voteCount,
-          };
-        });
-
-        return {
-          ...target,
-          _count: {
-            ...(target._count ?? {}),
-            likes: likeCount ?? target._count?.likes,
-            votes: totalVotes,
-          },
-          options: newOptions,
-          totalVotes,
-        };
-      };
-      if (state.currentPoll?.id === pollId) {
-        const base = {
-          ...state.currentPoll,
-          ...(partialPoll.id && { id: partialPoll.id }),
-          ...(partialPoll.question && { question: partialPoll.question }),
-          ...(partialPoll.description !== undefined && {
-            description: partialPoll.description,
-          }),
-          ...(partialPoll.settings && { settings: partialPoll.settings }),
-          ...(partialPoll.isPublic !== undefined && {
-            isPublic: partialPoll.isPublic,
-          }),
-          ...(partialPoll.isActive !== undefined && {
-            isActive: partialPoll.isActive,
-          }),
-          ...(partialPoll.closesAt && { closesAt: partialPoll.closesAt }),
-          ...(partialPoll.createdAt && { createdAt: partialPoll.createdAt }),
-          ...(partialPoll.updatedAt && { updatedAt: partialPoll.updatedAt }),
-        };
-
-        if (userLiked !== undefined) {
-          state.currentPoll.userLiked = userLiked;
-        }
-        state.currentPoll = mergeResults(base);
+      const { poll: updatedPoll } = updates;
+      if (state.currentPoll?.id === pollId && updatedPoll) {
+        state.currentPoll = updatedPoll;
       }
       const idx = state.polls.findIndex((p) => p.id === pollId);
-      if (idx !== -1) {
-        const base = {
+      if (idx !== -1 && updatedPoll) {
+        state.polls[idx] = {
           ...state.polls[idx],
-          ...(partialPoll.id && { id: partialPoll.id }),
-          ...(partialPoll.question && { question: partialPoll.question }),
-          ...(partialPoll.description !== undefined && {
-            description: partialPoll.description,
-          }),
-          ...(partialPoll.settings && { settings: partialPoll.settings }),
-          ...(partialPoll.isPublic !== undefined && {
-            isPublic: partialPoll.isPublic,
-          }),
-          ...(partialPoll.isActive !== undefined && {
-            isActive: partialPoll.isActive,
-          }),
-          ...(partialPoll.closesAt && { closesAt: partialPoll.closesAt }),
-          ...(partialPoll.createdAt && { createdAt: partialPoll.createdAt }),
-          ...(partialPoll.updatedAt && { updatedAt: partialPoll.updatedAt }),
+          _count: updatedPoll._count,
+          options: updatedPoll.options,
         };
-
-        state.polls[idx] = mergeResults(base);
       }
     },
   },

@@ -1,35 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 
 import { Favorite, FavoriteBorder } from "@mui/icons-material";
 import { IconButton, Typography, Box, Tooltip } from "@mui/material";
 
-import { usePolls } from "@/hooks/usePolls";
-import { useRealtime } from "@/hooks/useRealtime";
-
-function LikeButton({ pollId }) {
-  const { currentPoll, likePoll, isAuthenticated } = usePolls();
-  const { isConnected } = useRealtime(pollId);
-  const [isLiking, setIsLiking] = useState(false);
-
-  if (!currentPoll || currentPoll.id !== pollId) {
-    return null;
-  }
-
-  const handleLike = async () => {
-    if (!isAuthenticated || isLiking) return;
-
-    setIsLiking(true);
-    try {
-      await likePoll(pollId);
-    } catch (error) {
-      console.error("Error liking poll:", error);
-    } finally {
-      setIsLiking(false);
-    }
-  };
-
+function LikeButton({
+  likeCount,
+  isLiked,
+  isConnected,
+  isAuthenticated,
+  onLike,
+}) {
   const getTooltipTitle = () => {
     if (!isAuthenticated) return "Sign in to like this poll";
     if (isLiked) return "Unlike this poll";
@@ -41,16 +23,13 @@ function LikeButton({ pollId }) {
     return <FavoriteBorder />;
   };
 
-  const likeCount = currentPoll._count?.likes || 0;
-  const isLiked = currentPoll.userLiked;
-
   return (
     <Box sx={{ alignItems: "center", display: "flex" }}>
       <Tooltip title={getTooltipTitle()}>
         <span>
           <IconButton
-            onClick={handleLike}
-            disabled={!isAuthenticated || isLiking}
+            onClick={onLike}
+            disabled={!isAuthenticated}
             color={isLiked ? "error" : "default"}
             sx={{
               "&:hover": {
@@ -92,4 +71,4 @@ function LikeButton({ pollId }) {
   );
 }
 
-export default LikeButton;
+export default React.memo(LikeButton);

@@ -52,7 +52,7 @@ export async function POST(req, { params }) {
       });
     }
 
-    await broadcastToPoll(pollId);
+    await broadcastToPoll(pollId, userId);
     await broadcastToDashboard();
 
     return Response.json(
