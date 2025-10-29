@@ -25,10 +25,7 @@ export const Header = React.memo(({ userData, onSignOut }) => {
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
-  const menuItems = [
-    { href: ROUTES.polls, label: "View Polls" },
-    { href: ROUTES.viewLiveDemo, label: "Live Demo" },
-  ];
+  const menuItems = [{ href: ROUTES.polls, label: "View Polls" }];
 
   return (
     <AppBar

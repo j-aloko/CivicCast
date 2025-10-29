@@ -52,6 +52,7 @@ CivicCast/
     ├── prisma/
     └── services/
 ```
+
 - Top-level files: configuration, README, and package files.
 - `.husky/`: Git hooks for code quality checks.
 - `.vscode/`: Editor settings.
@@ -126,20 +127,24 @@ ctrl.enqueue(new TextEncoder().encode(message));
 ## Getting Started
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/j-aloko/CivicCast.git
    cd CivicCast
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Set up environment variables**
+
    - Configure your `.env` file as needed for authentication and database access.
 
 4. **Run the development server**
+
    ```bash
    npm run dev
    ```

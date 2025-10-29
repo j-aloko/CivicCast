@@ -50,13 +50,7 @@ function HeroContent() {
         results update live across the globe. No refresh needed.
       </Typography>
 
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: { sm: "row", xs: "column" },
-          gap: 2,
-        }}
-      >
+      <Box>
         <Button
           variant="contained"
           href={ROUTES.createPoll}
@@ -75,26 +69,6 @@ function HeroContent() {
           }}
         >
           Create Your First Poll
-        </Button>
-
-        <Button
-          variant="outlined"
-          href={ROUTES.viewLiveDemo}
-          component={Link}
-          sx={{
-            "&:hover": {
-              backgroundColor: "grey.100",
-              borderColor: "primary.light",
-            },
-            borderColor: "primary.main",
-            color: "primary.main",
-            fontSize: "1rem",
-            fontWeight: "bold",
-            px: 4,
-            py: 2,
-          }}
-        >
-          View Live Demo
         </Button>
       </Box>
     </Box>
