@@ -21,6 +21,9 @@ export const authOptions = {
       }
       return session;
     },
+    async signIn() {
+      return true;
+    },
   },
   debug: process.env.NODE_ENV === "development",
   pages: {
