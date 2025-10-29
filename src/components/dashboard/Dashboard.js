@@ -111,7 +111,11 @@ const StatsSection = React.memo(({ stats }) => (
 StatsSection.displayName = "StatsSection";
 
 const RecentPollsSection = React.memo(({ polls, hasPolls }) => (
-  <>
+  <Box
+    sx={{
+      mb: 4,
+    }}
+  >
     <Box
       sx={{
         display: "flex",
@@ -124,7 +128,7 @@ const RecentPollsSection = React.memo(({ polls, hasPolls }) => (
     </Box>
 
     {!hasPolls ? <EmptyPollsState /> : <PollsGrid polls={polls} />}
-  </>
+  </Box>
 ));
 
 RecentPollsSection.displayName = "RecentPollsSection";
