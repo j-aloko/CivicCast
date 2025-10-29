@@ -1,5 +1,6 @@
 import React from "react";
 
+import Container from "@mui/material/Container";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider } from "@mui/material/styles";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
@@ -24,8 +25,10 @@ export default function RootLayout({ children }) {
           <ThemeProvider theme={theme}>
             <CssBaseline />
             <Providers>
-              <HeaderContainer />
-              {children}
+              <Container maxWidth="xl" disableGutters>
+                <HeaderContainer />
+                {children}
+              </Container>
             </Providers>
           </ThemeProvider>
         </AppRouterCacheProvider>
