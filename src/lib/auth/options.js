@@ -21,7 +21,7 @@ export const authOptions = {
       }
       return session;
     },
-    async signIn() {
+    signIn: async () => {
       return true;
     },
   },
